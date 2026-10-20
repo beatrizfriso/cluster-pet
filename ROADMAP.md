@@ -16,13 +16,13 @@ Cada fase termina com algo funcionando e visível. Marque os itens conforme avan
 ---
 
 ## Fase 1: ele mora no Kubernetes (1–2 semanas)
-- [ ] Criar o cluster com `make cluster` e explorar com `kubectl get nodes,pods -A`
+- [x] Criar o cluster com `make cluster` e explorar com `kubectl get nodes,pods -A`
 - [ ] `make deploy` e entender cada campo do `deployment.yaml`
 - [x] Matar um pod (`kubectl delete pod`) e ver o Deployment recriá-lo
 - [x] Quebrar a liveness probe de propósito e observar o CrashLoopBackOff
 - [x] Baixar o limit de memória até ver um OOMKilled
-- [ ] Adicionar um Ingress no chart para acessar em `localhost:8080`
-- [ ] Adicionar um HorizontalPodAutoscaler
+- [x] Adicionar um Ingress no chart para acessar em `localhost:8080`
+- [x] Adicionar um HorizontalPodAutoscaler
 
 **Pronto quando:** você mata pods e o bichinho continua vivo.
 
@@ -92,6 +92,15 @@ Cada fase termina com algo funcionando e visível. Marque os itens conforme avan
 - [ ] Registrar cada diagnóstico (bom material para avaliar o agente)
 
 **Pronto quando:** um experimento do Chaos Mesh dispara e o agente explica a causa certa.
+
+---
+
+## Releases (uma por fase concluída)
+Release é um marco versionado, não um deploy: o Argo CD continua fazendo deploy
+de cada merge na `main` pelo SHA do commit.
+- [ ] Fim da Fase 1: `v0.1.0` manual (`git tag` + `gh release create --generate-notes`), alinhada com `version`/`appVersion` do `Chart.yaml`
+- [ ] Fase 2: workflow que, numa tag `v*`, publica a imagem `ghcr.io/<user>/kubegotchi:<versão>`
+- [ ] Depois: automatizar com release-please (versão e changelog a partir dos Conventional Commits)
 
 ---
 
