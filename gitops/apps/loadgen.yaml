@@ -1,0 +1,21 @@
+# Simulated pet owners generating background traffic (gitops/loadgen/)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loadgen
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io/background
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/beatrizfriso/cluster-pet.git
+    targetRevision: main
+    path: gitops/loadgen
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: loadgen
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
