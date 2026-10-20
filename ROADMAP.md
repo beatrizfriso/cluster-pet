@@ -49,7 +49,8 @@ Every phase ends with something working and visible. Check items off as you go.
 - [x] Write the PromQL queries for the SLIs (availability and p95 latency)
 - [x] Define SLOs with Sloth or Pyrra (e.g. 99% availability over 7 days)
 - [x] Grafana dashboard: pet status + remaining error budget
-- [ ] Turn on chaos and watch the budget burn (procedure in [docs/phase-3.md](docs/phase-3.md#chaos-experiment-burning-the-budget))
+- [x] Turn on chaos and watch the budget burn (procedure and results in [docs/phase-3.md](docs/phase-3.md#chaos-experiment-burning-the-budget))
+- [ ] Fix startup restarts under CPU throttling: `startupProbe` + CPU limit (found by the chaos experiment)
 
 **Done when:** Grafana shows how much error budget is left and the burn rate.
 

@@ -239,7 +239,60 @@ back to `errorRate: 0`: `500`s stop, burn rate decays over the next hour, the
 alert resolves. **The budget that was spent stays spent** until those errors
 leave the 7d window.
 
-### Result
+### Result (2026-10-20)
 
-_To be filled in after the experiment: when the alert fired, peak burn rate,
-budget left at the end, and whether the hypothesis held._
+**Timeline (UTC)**
+
+| Time | Event |
+|---|---|
+| 23:38:45 | Pod with `errorRate: 0.5` ready (PR #18) |
+| 23:40:36 | `ErrorBudgetBurn` pending (1d window) |
+| 23:41:06 | `ErrorBudgetBurn` pending (6h window) |
+| 23:45:06 | **`ErrorBudgetBurn` firing** (15m/1m pair), ~6 min after injection |
+| 23:46:06 | Pod without chaos running (revert, PR #20) |
+| 23:48 | Error ratio back to 0; longer-window alerts still active, resolving as the errors age out of their short windows |
+
+**Numbers**
+
+| | Value |
+|---|---|
+| Peak error ratio (5m) | **52.6%** |
+| Peak burn rate (1h average) | 8.9× (the 1h average never caught up in ~7 min; the 5m ratio was ~52×) |
+| 5xx served during the experiment | ~289 |
+| Availability over the "7d" window | 91.5% |
+| Availability budget left | **−747%** |
+| Latency SLI | 99.4%, untouched (errors are fast) |
+| Restarts caused by chaos | 0 |
+
+**Hypothesis check**
+
+| Expected | Happened? |
+|---|---|
+| Error ratio ~50%, burn rate ~50× | ✅ 52.6% (5m). The 1h burn rate panel only reached 8.9×: a 1h average needs an hour of errors to show the full rate |
+| `ErrorBudgetBurn` fires within minutes | ✅ ~6 min, on the shortest window pair |
+| Budget drops visibly | ✅ far more than planned, see below |
+| 5xx on every route | ✅ |
+| Probes keep passing, no restart from chaos | ✅ the pet was sick, not dead |
+
+**What we learned**
+
+1. **A brand-new SLO is fragile until its window fills.** Prometheus had only
+   ~1h of data, so the "7d" budget was 1% of ~5,400 requests: about 54 errors.
+   ~7 minutes at 50% spent ~289, hence −747%. With a full week of traffic
+   (~900k requests at 1.5 req/s) the same experiment would cost ~3% of the
+   budget. Run budget-burning experiments only once the window has history, or
+   read the budget panel with that in mind.
+2. **Burn rate depends on the window you look at.** The alert uses short
+   windows and fired in minutes; the dashboard's 1h burn rate lagged far
+   behind. For "is it on fire right now", the 5m error ratio or the alert is the
+   signal; the 1h panel shows the trend.
+3. **Unplanned finding: startup restarts under CPU throttling.** The chaos pod
+   restarted once while starting, unrelated to the chaos: the `pet` container
+   was CPU-throttled in 17.7% of periods (alert `CPUThrottlingHigh`, limit
+   250m), Python started slowly, and liveness killed it before it was ready
+   (`connection refused`, then `context deadline exceeded`). Every deploy is
+   exposed to this, and those restarts also cost availability budget. Fix: a
+   `startupProbe` and a higher CPU limit.
+4. **The revert reused the old ReplicaSet** (`5f75b48b9f`): the template went
+   back to exactly what it was before, so Kubernetes scaled the previous
+   ReplicaSet up instead of creating a new one.
