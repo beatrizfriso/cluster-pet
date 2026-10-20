@@ -1,0 +1,26 @@
+# Our own monitoring objects (PodMonitors, SLOs, dashboards) from gitops/monitoring/
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-config
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/beatrizfriso/cluster-pet.git
+    targetRevision: main
+    path: gitops/monitoring
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      # The PodMonitor CRD only exists once the monitoring app has synced;
+      # until then Argo CD retries instead of failing the dry run
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s

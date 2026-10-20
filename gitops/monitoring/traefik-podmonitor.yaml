@@ -1,0 +1,17 @@
+# Traefik sees every request to the pet, including the 502/503/504 it returns
+# when the pod is down. The app's own metrics can't: a dead pod reports nothing.
+# The SLIs are measured here. k3s's Traefik exposes metrics only on the pod
+# (port "metrics", 9100), not on its Service, hence a PodMonitor.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: traefik
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s
