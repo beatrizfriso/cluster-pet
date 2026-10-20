@@ -1,5 +1,6 @@
 # CI: validates the chart and the app on every PR; on main and on v* tags it
-# also scans and publishes the image to ghcr.io.
+# also scans and publishes the image to ghcr.io, and on main it bumps the
+# image tag in the chart so Argo CD deploys it.
 name: ci
 
 on:
@@ -121,3 +122,44 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
+
+  # GitOps: the deploy is a commit. Pointing values.yaml at the new image is
+  # what makes Argo CD roll it out. Pushes made with GITHUB_TOKEN don't trigger
+  # workflows, so this commit can't start an endless CI loop.
+  bump-tag:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Two merges in a row must not race each other pushing to main
+    concurrency:
+      group: bump-tag
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      # Docs or chart-only merges keep the running image (and the pet's state)
+      - name: Did the app change?
+        id: changes
+        run: |
+          if git diff --quiet HEAD^ HEAD -- app/; then
+            echo "app=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "app=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Point the chart at the new image
+        if: steps.changes.outputs.app == 'true'
+        run: |
+          # Same 7-char short SHA that docker/metadata-action used in publish
+          tag="sha-${GITHUB_SHA::7}"
+          sed -i -E "s/^(  tag: ).*/\1${tag}/" charts/kubegotchi/values.yaml
+          grep -q "^  tag: ${tag}$" charts/kubegotchi/values.yaml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(deploy): run image ${tag}"
+          git pull --rebase origin main
+          git push origin HEAD:main
