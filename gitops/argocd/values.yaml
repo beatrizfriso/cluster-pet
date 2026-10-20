@@ -1,0 +1,25 @@
+# Argo CD for the local k3d cluster (chart argo/argo-cd, version pinned in the Makefile)
+# UI: http://argocd.localhost:8080  (user admin, password: make argocd-password)
+
+global:
+  # *.localhost resolves to 127.0.0.1 in browsers, so no hosts file edit needed
+  domain: argocd.localhost
+
+configs:
+  params:
+    # Traefik serves plain HTTP on localhost:8080; without this the Argo CD
+    # server would redirect to HTTPS and loop. Never do this outside a local lab.
+    server.insecure: true
+
+server:
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+
+# SSO is not needed locally: login with the admin user
+dex:
+  enabled: false
+
+# Alerts come in Phase 5 with Alertmanager
+notifications:
+  enabled: false

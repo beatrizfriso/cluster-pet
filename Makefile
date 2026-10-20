@@ -7,7 +7,9 @@ CLUSTER := kubegotchi
 TAG     := $(shell sh -c 'date +%s')
 IMAGE   := kubegotchi:$(TAG)
 
-.PHONY: run run-docker test cluster build load deploy up pet feed play sleep down
+ARGOCD_CHART_VERSION := 10.10.5
+
+.PHONY: run run-docker test cluster build load deploy up pet feed play sleep argocd argocd-password down
 
 ## Phase 0: run the pet directly on your machine
 run:
@@ -52,6 +54,16 @@ play:
 	curl -s -X POST localhost:8000/play; echo
 sleep:
 	curl -s -X POST localhost:8000/sleep; echo
+
+## Phase 2: install or upgrade Argo CD (UI at http://argocd.localhost:8080)
+argocd:
+	helm repo add argo https://argoproj.github.io/argo-helm --force-update
+	helm upgrade --install argocd argo/argo-cd --version $(ARGOCD_CHART_VERSION) \
+		--namespace argocd --create-namespace -f gitops/argocd/values.yaml --wait --timeout 5m
+
+## Initial admin password (change it in the UI and delete the secret afterwards)
+argocd-password:
+	@kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
 
 down:
 	k3d cluster delete $(CLUSTER)
