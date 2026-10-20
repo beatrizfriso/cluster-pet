@@ -1,19 +1,19 @@
 petName: Bolinha
-# Quanto cada status cai por minuto
+# How much each stat drops per minute
 decayPerMinute: 2
-# 1 réplica de propósito: o estado do bichinho vive na memória do pod, então
-# com 2+ réplicas cada pod seria um bichinho diferente (alimenta um, consulta
-# outro). Na Fase 4 o estado passa a vir do Prometheus (/vitals), o app fica
-# stateless e aí dá para escalar. Experimente subir para 2 e ver o problema.
+# 1 replica on purpose: the pet's state lives in the pod's memory, so with
+# 2+ replicas each pod would be a different pet (feed one, query another).
+# In Phase 4 the state comes from Prometheus (/vitals), the app becomes
+# stateless and can scale. Try bumping it to 2 and see the problem.
 replicaCount: 1
 
-# Desligado pelo mesmo motivo do replicaCount: com 2+ réplicas o estado se
-# divide. Ligue para ver o problema; vira útil de verdade na Fase 4.
+# Disabled for the same reason as replicaCount: with 2+ replicas the state
+# splits. Turn it on to see the problem; it becomes truly useful in Phase 4.
 autoscaling:
   enabled: false
   minReplicas: 1
   maxReplicas: 3
-  # % do requests.cpu (50m): acima de ~30m por pod, o HPA escala
+  # % of requests.cpu (50m): above ~30m per pod, the HPA scales out
   targetCPUUtilizationPercentage: 60
 
 image:
@@ -24,11 +24,11 @@ image:
 service:
   port: 80
 
-# Traefik já vem no k3s; o k3d expõe ele em localhost:8080 (k3d/cluster.yaml)
+# Traefik ships with k3s; k3d exposes it on localhost:8080 (k3d/cluster.yaml)
 ingress:
   enabled: true
   className: traefik
-  # Vazio aceita qualquer host. Ex.: "kubegotchi.localhost" para separar por nome
+  # Empty accepts any host. E.g. "kubegotchi.localhost" to route by name
   host: ""
 
 resources:
@@ -39,14 +39,14 @@ resources:
     cpu: 250m
     memory: 128Mi
 
-# "Maltratar" o bichinho de propósito (Fase 3 em diante)
+# "Mistreat" the pet on purpose (Phase 3 onward)
 chaos:
   latencyMs: 0
   errorRate: 0
 
-# Ligue na Fase 3, depois de instalar o kube-prometheus-stack
+# Turn on in Phase 3, after installing kube-prometheus-stack
 serviceMonitor:
   enabled: false
   interval: 15s
-  # label que o Prometheus do kube-prometheus-stack procura
+  # label that the kube-prometheus-stack Prometheus looks for
   release: monitoring

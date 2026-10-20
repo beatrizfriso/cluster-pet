@@ -1,67 +1,71 @@
 # 🐣 Kubegotchi - WIP
 
-Um bichinho virtual cuja saúde **é** o seu cluster Kubernetes.
+A virtual pet whose health **is** your Kubernetes cluster.
 
-Os SLOs viram fome, humor e energia: se a latência sobe, ele fica triste; se o error budget acaba, ele adoece. Um veterinário de AI diagnostica o que está errado e propõe o conserto.
+SLOs become hunger, mood and energy: if latency goes up, it gets sad; if the error budget runs out, it gets sick. An AI vet diagnoses what's wrong and proposes the fix.
 
-Projeto de estudo de **Kubernetes, GitOps, SRE e AI**, feito para rodar 100% local e sem custo de cloud.
+A study project for **Kubernetes, GitOps, SRE and AI**, built to run 100% locally with no cloud cost.
 
-## O que você precisa instalar
+## What you need to install
 
 - Docker
-- [k3d](https://k3d.io) (k3s dentro do Docker)
+- [k3d](https://k3d.io) (k3s inside Docker)
 - kubectl
 - Helm
 - make, curl
 
-## Começando
+## Getting started
 
 ```bash
-# Fase 0: o bichinho na sua máquina
-make run
-# em outro terminal
+# Phase 0: the pet on your machine
+make run          # or: make run-docker (no local Python needed)
+# in another terminal
 curl localhost:8000/status
 curl -X POST localhost:8000/feed
 curl localhost:8000/metrics | grep kubegotchi
 
-# Fase 1: o bichinho no Kubernetes
-make up          # cria o cluster, faz build, instala o chart
-make pet         # port-forward (deixe rodando)
-make feed        # em outro terminal
+# Phase 1: the pet on Kubernetes
+make up           # creates the cluster, builds the image, installs the chart
+curl localhost:8080/status            # through the Ingress
+curl -X POST localhost:8080/feed
 ```
 
-## Estrutura
+> On Windows PowerShell, `curl` is an alias for `Invoke-WebRequest`. Use `curl.exe`.
+
+## Layout
 
 ```
-app/                  o bichinho (FastAPI + métricas Prometheus)
-charts/kubegotchi/    Helm chart
-k3d/cluster.yaml      cluster local: 1 server + 2 agents
-.github/workflows/    CI: helm lint, smoke test, docker build
-ROADMAP.md            as fases do projeto, com checklist
+app/                  the pet (FastAPI + Prometheus metrics)
+charts/kubegotchi/    Helm chart (Deployment, Service, Ingress, opt-in HPA and ServiceMonitor)
+k3d/cluster.yaml      local cluster: 1 server + 2 agents
+.github/workflows/    CI: gitleaks, helm lint, unit tests, smoke test, docker build
+docs/                 lab notes for each phase
+experiments/          files used in the hands-on exercises
+ROADMAP.md            the project phases, with checklists
 ```
 
-## Como o bichinho funciona
+## How the pet works
 
-| Status      | 100 = ótimo | Cai com o tempo | Recupera com |
-|-------------|-------------|-----------------|--------------|
-| `hunger`    | saciado     | sim             | `POST /feed` |
-| `happiness` | feliz       | sim             | `POST /play` |
-| `energy`    | disposto    | sim             | `POST /sleep`|
+| Stat        | 100 = great | Decays over time | Recovers with |
+|-------------|-------------|------------------|---------------|
+| `hunger`    | full        | yes              | `POST /feed`  |
+| `happiness` | happy       | yes              | `POST /play`  |
+| `energy`    | rested      | yes              | `POST /sleep` |
 
-O humor (`feliz`, `ok`, `triste`, `doente`) vem do pior status. A partir da Fase 3, quem manda nos status são os **SLOs do cluster**, não só os cuidados.
+The mood (`happy`, `ok`, `sad`, `sick`) comes from the worst stat. From Phase 3 on, the stats are driven by the **cluster's SLOs**, not just by care.
 
-### Maltratando o bichinho de propósito
+### Mistreating the pet on purpose
 
 ```bash
 helm upgrade kubegotchi charts/kubegotchi -n pet --reuse-values \
   --set chaos.latencyMs=400 --set chaos.errorRate=0.1
 ```
 
-## Métricas expostas
+## Exposed metrics
 
-| Métrica | Tipo | Para quê |
+| Metric | Type | Purpose |
 |---|---|---|
-| `kubegotchi_http_requests_total{path,method,code}` | counter | SLI de disponibilidade |
-| `kubegotchi_http_request_duration_seconds` | histogram | SLI de latência |
-| `kubegotchi_stat{stat}` | gauge | status do bichinho |
-| `kubegotchi_actions_total{action}` | counter | quantos cuidados ele recebeu |
+| `kubegotchi_http_requests_total{path,method,code}` | counter | availability SLI |
+| `kubegotchi_http_request_duration_seconds` | histogram | latency SLI |
+| `kubegotchi_stat{stat}` | gauge | the pet's stats |
+| `kubegotchi_actions_total{action}` | counter | how much care it received |

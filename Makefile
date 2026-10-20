@@ -1,49 +1,49 @@
 CLUSTER := kubegotchi
-# Tag nova a cada execução: com uma tag fixa o spec do Deployment não muda
-# e o Helm não faz rollout do código novo. Para fixar: make deploy TAG=abc
-# A tag vai com --set-string: com --set o Helm lê o timestamp como número e,
-# num upgrade --reuse-values, renderiza como 1.79e+09 (InvalidImageName).
-# Via sh -c para funcionar também no Windows (sh do Git for Windows no PATH)
+# New tag on every run: with a fixed tag the Deployment spec doesn't change
+# and Helm doesn't roll out the new code. To pin it: make deploy TAG=abc
+# The tag goes through --set-string: with --set Helm reads the timestamp as a
+# number and, on an upgrade --reuse-values, renders it as 1.79e+09 (InvalidImageName).
+# Via sh -c so it also works on Windows (Git for Windows sh on the PATH)
 TAG     := $(shell sh -c 'date +%s')
 IMAGE   := kubegotchi:$(TAG)
 
 .PHONY: run run-docker test cluster build load deploy up pet feed play sleep down
 
-## Fase 0: roda o bichinho direto na sua máquina
+## Phase 0: run the pet directly on your machine
 run:
 	cd app && pip install -r requirements.txt && uvicorn main:app --reload
 
-## Fase 0 sem Python local: mesma imagem que vai para o cluster (Ctrl+C para parar)
+## Phase 0 without local Python: same image that goes to the cluster (Ctrl+C to stop)
 run-docker:
 	docker build -t kubegotchi:dev app
 	docker run --rm -it -p 8000:8000 kubegotchi:dev
 
-## Testes unitários em container (não precisa de Python local).
-## MSYS_NO_PATHCONV evita que o sh do Git for Windows reescreva o "/app".
+## Unit tests in a container (no local Python needed).
+## MSYS_NO_PATHCONV keeps Git for Windows sh from rewriting "/app".
 test:
 	MSYS_NO_PATHCONV=1 docker run --rm -v "$(CURDIR)/app:/app:ro" -w /app \
 		-e PYTHONDONTWRITEBYTECODE=1 python:3.12-slim \
 		sh -c "pip install -q --root-user-action=ignore -r requirements-dev.txt && pytest -q -p no:cacheprovider"
 
-## Fase 1: cria o cluster local
+## Phase 1: create the local cluster
 cluster:
 	k3d cluster create --config k3d/cluster.yaml
 
-## Faz build da imagem e envia para dentro do cluster (sem registry)
+## Build the image and push it into the cluster (no registry)
 build:
 	docker build -t $(IMAGE) app
 load: build
 	k3d image import $(IMAGE) -c $(CLUSTER)
 
-## Instala ou atualiza o chart
+## Install or upgrade the chart
 deploy: load
 	helm upgrade --install kubegotchi charts/kubegotchi --namespace pet --create-namespace \
 		--set-string image.tag=$(TAG)
 
-## Tudo de uma vez
+## Everything at once
 up: cluster deploy
 
-## Conversar com o bichinho (deixe 'make pet' rodando em outro terminal)
+## Talk to the pet (leave 'make pet' running in another terminal)
 pet:
 	kubectl -n pet port-forward svc/kubegotchi 8000:80
 feed:

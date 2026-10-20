@@ -1,15 +1,15 @@
 """
-Kubegotchi - um bichinho virtual que vive no seu cluster Kubernetes.
+Kubegotchi - a virtual pet that lives in your Kubernetes cluster.
 
-Fase 0: o bichinho tem status (fome, humor, energia) que caem com o tempo.
-Você cuida dele pelos endpoints /feed, /play e /sleep.
-Tudo é exposto em /metrics para o Prometheus.
+Phase 0: the pet has stats (hunger, happiness, energy) that decay over time.
+You take care of it through the /feed, /play and /sleep endpoints.
+Everything is exposed at /metrics for Prometheus.
 
-Variáveis de ambiente para "maltratar" o bichinho (úteis a partir da Fase 3):
-  PET_NAME            nome do bichinho (padrão: Bolinha)
-  CHAOS_LATENCY_MS    latência extra em toda requisição, em ms (padrão: 0)
-  CHAOS_ERROR_RATE    fração de requisições que falham com 500, 0.0 a 1.0 (padrão: 0)
-  DECAY_PER_MINUTE    quanto cada status cai por minuto (padrão: 2)
+Environment variables to "mistreat" the pet (useful from Phase 3 on):
+  PET_NAME            the pet's name (default: Bolinha)
+  CHAOS_LATENCY_MS    extra latency on every request, in ms (default: 0)
+  CHAOS_ERROR_RATE    fraction of requests that fail with 500, 0.0 to 1.0 (default: 0)
+  DECAY_PER_MINUTE    how much each stat drops per minute (default: 2)
 """
 
 import asyncio
@@ -29,27 +29,27 @@ CHAOS_ERROR_RATE = float(os.getenv("CHAOS_ERROR_RATE", "0"))
 DECAY_PER_MINUTE = float(os.getenv("DECAY_PER_MINUTE", "2"))
 
 # ---------------------------------------------------------------------------
-# Métricas (os "sinais vitais" que o Prometheus vai coletar)
+# Metrics (the "vital signs" Prometheus will scrape)
 # ---------------------------------------------------------------------------
 REQUESTS = Counter(
     "kubegotchi_http_requests_total",
-    "Total de requisições HTTP",
+    "Total HTTP requests",
     ["path", "method", "code"],
 )
 LATENCY = Histogram(
     "kubegotchi_http_request_duration_seconds",
-    "Duração das requisições HTTP",
+    "HTTP request duration",
     ["path"],
     buckets=(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5),
 )
-STAT = Gauge("kubegotchi_stat", "Status do bichinho, de 0 a 100", ["stat"])
-ACTIONS = Counter("kubegotchi_actions_total", "Cuidados recebidos", ["action"])
+STAT = Gauge("kubegotchi_stat", "Pet stat, from 0 to 100", ["stat"])
+ACTIONS = Counter("kubegotchi_actions_total", "Care actions received", ["action"])
 
 # ---------------------------------------------------------------------------
-# Estado do bichinho
+# Pet state
 # ---------------------------------------------------------------------------
 _lock = threading.Lock()
-_stats = {"hunger": 100.0, "happiness": 100.0, "energy": 100.0}  # 100 = ótimo
+_stats = {"hunger": 100.0, "happiness": 100.0, "energy": 100.0}  # 100 = great
 _born_at = time.time()
 
 
@@ -63,7 +63,7 @@ def _publish() -> None:
 
 
 def _decay() -> None:
-    """Um tick de 10s: cada status cai 1/6 do decay por minuto."""
+    """One 10s tick: each stat drops 1/6 of the per-minute decay."""
     with _lock:
         for k in _stats:
             _stats[k] = _clamp(_stats[k] - DECAY_PER_MINUTE / 6)
@@ -71,7 +71,7 @@ def _decay() -> None:
 
 
 def _decay_loop() -> None:
-    """Os status caem com o tempo, como num tamagotchi de verdade."""
+    """Stats drop over time, like a real tamagotchi."""
     while True:
         time.sleep(10)
         _decay()
@@ -80,12 +80,12 @@ def _decay_loop() -> None:
 def _mood() -> str:
     worst = min(_stats.values())
     if worst >= 70:
-        return "feliz"
+        return "happy"
     if worst >= 40:
         return "ok"
     if worst >= 15:
-        return "triste"
-    return "doente"
+        return "sad"
+    return "sick"
 
 
 def _change(**deltas: float) -> dict:
@@ -101,17 +101,17 @@ def _change(**deltas: float) -> dict:
 # ---------------------------------------------------------------------------
 app = FastAPI(title="Kubegotchi")
 
-# Rotas fora do SLI: não sofrem chaos e não entram nas métricas.
-# As probes batem a cada poucos segundos e sempre dão 200; contá-las
-# inflaria a disponibilidade e esconderia a queima do error budget.
+# Routes outside the SLI: no chaos and no metrics.
+# Probes hit every few seconds and always return 200; counting them
+# would inflate availability and hide the error budget burn.
 _UNOBSERVED = ("/metrics", "/healthz", "/readyz")
 
 
 def _route_path(request: Request) -> str:
-    """Template da rota (ex.: /status), nunca o path cru.
+    """Route template (e.g. /status), never the raw path.
 
-    Usar request.url.path como label deixaria qualquer scanner criar
-    séries novas no Prometheus (/wp-admin, /x1, /x2...).
+    Using request.url.path as a label would let any scanner create
+    new series in Prometheus (/wp-admin, /x1, /x2...).
     """
     for route in app.router.routes:
         match, _ = route.matches(request.scope)
@@ -130,7 +130,7 @@ async def observe(request: Request, call_next):
             if CHAOS_LATENCY_MS > 0:
                 await asyncio.sleep(CHAOS_LATENCY_MS / 1000)
             if random.random() < CHAOS_ERROR_RATE:
-                raise HTTPException(status_code=500, detail="o bichinho espirrou 🤧")
+                raise HTTPException(status_code=500, detail="the pet sneezed 🤧")
         response = await call_next(request)
         code = response.status_code
         return response
@@ -175,13 +175,13 @@ def sleep() -> dict:
 
 @app.get("/healthz")
 def healthz() -> dict:
-    """Liveness: o processo está vivo?"""
+    """Liveness: is the process alive?"""
     return {"ok": True}
 
 
 @app.get("/readyz")
 def readyz() -> dict:
-    """Readiness: o bichinho está em condições de receber visitas?"""
+    """Readiness: is the pet fit to receive visitors?"""
     return {"ready": True}
 
 
