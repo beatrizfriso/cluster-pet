@@ -1,0 +1,14 @@
+# Cluster local do Kubegotchi
+# Criar:   k3d cluster create --config k3d/cluster.yaml
+# Apagar:  k3d cluster delete kubegotchi
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: kubegotchi
+servers: 1
+agents: 2
+ports:
+  # Ingress do Traefik (já vem no k3s) exposto em localhost:8080
+  - port: 8080:80
+    nodeFilters:
+      - loadbalancer

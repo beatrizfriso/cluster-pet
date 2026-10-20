@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.env.*
+# Credenciais e acesso a clusters nunca vão para o Git
+*.pem
+*.key
+kubeconfig*
+*.kubeconfig
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
