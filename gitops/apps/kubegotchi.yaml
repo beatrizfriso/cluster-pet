@@ -1,0 +1,31 @@
+# Argo CD keeps the cluster equal to charts/kubegotchi on main.
+# Bootstrap once with: make argocd-app
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubegotchi
+  namespace: argocd
+  # Deleting the Application also deletes what it deployed
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io/background
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/beatrizfriso/cluster-pet.git
+    targetRevision: main
+    path: charts/kubegotchi
+    helm:
+      # Same name as the old `make deploy` release, so Argo CD adopts the
+      # existing resources instead of creating a second copy
+      releaseName: kubegotchi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pet
+  syncPolicy:
+    automated:
+      # Remove resources that disappear from Git
+      prune: true
+      # Revert manual changes (kubectl edit/patch, helm upgrade) back to Git
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
