@@ -10,6 +10,7 @@ Environment variables to "mistreat" the pet (useful from Phase 3 on):
   CHAOS_LATENCY_MS    extra latency on every request, in ms (default: 0)
   CHAOS_ERROR_RATE    fraction of requests that fail with 500, 0.0 to 1.0 (default: 0)
   DECAY_PER_MINUTE    how much each stat drops per minute (default: 2)
+  APP_VERSION         image tag being run, shown in /status (default: dev)
 """
 
 import asyncio
@@ -27,6 +28,7 @@ PET_NAME = os.getenv("PET_NAME", "Bolinha")
 CHAOS_LATENCY_MS = float(os.getenv("CHAOS_LATENCY_MS", "0"))
 CHAOS_ERROR_RATE = float(os.getenv("CHAOS_ERROR_RATE", "0"))
 DECAY_PER_MINUTE = float(os.getenv("DECAY_PER_MINUTE", "2"))
+APP_VERSION = os.getenv("APP_VERSION", "dev")
 
 # ---------------------------------------------------------------------------
 # Metrics (the "vital signs" Prometheus will scrape)
@@ -152,6 +154,7 @@ def status() -> dict:
             "age_minutes": round((time.time() - _born_at) / 60, 1),
             "stats": {k: round(v, 1) for k, v in _stats.items()},
             "pod": os.getenv("HOSTNAME", "local"),
+            "version": APP_VERSION,
         }
 
 

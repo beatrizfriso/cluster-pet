@@ -49,6 +49,7 @@ def test_status_shape():
     assert body["mood"] == "ok"
     assert body["stats"] == {"hunger": 50, "happiness": 50, "energy": 50}
     assert {"age_minutes", "pod"} <= body.keys()
+    assert body["version"] == main.APP_VERSION
 
 
 @pytest.mark.parametrize("action, expected", [
