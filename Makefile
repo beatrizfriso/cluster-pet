@@ -7,11 +7,16 @@ CLUSTER := kubegotchi
 TAG     := $(shell sh -c 'date +%s')
 IMAGE   := kubegotchi:$(TAG)
 
-.PHONY: run test cluster build load deploy up pet feed play sleep down
+.PHONY: run run-docker test cluster build load deploy up pet feed play sleep down
 
 ## Fase 0: roda o bichinho direto na sua máquina
 run:
 	cd app && pip install -r requirements.txt && uvicorn main:app --reload
+
+## Fase 0 sem Python local: mesma imagem que vai para o cluster (Ctrl+C para parar)
+run-docker:
+	docker build -t kubegotchi:dev app
+	docker run --rm -it -p 8000:8000 kubegotchi:dev
 
 ## Testes unitários em container (não precisa de Python local).
 ## MSYS_NO_PATHCONV evita que o sh do Git for Windows reescreva o "/app".
