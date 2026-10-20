@@ -9,7 +9,7 @@ IMAGE   := kubegotchi:$(TAG)
 
 ARGOCD_CHART_VERSION := 10.10.5
 
-.PHONY: run run-docker test cluster build load deploy up pet feed play sleep argocd argocd-password down
+.PHONY: run run-docker test cluster build load deploy up pet feed play sleep argocd argocd-app argocd-password down
 
 ## Phase 0: run the pet directly on your machine
 run:
@@ -37,10 +37,11 @@ build:
 load: build
 	k3d image import $(IMAGE) -c $(CLUSTER)
 
-## Install or upgrade the chart
+## Install or upgrade the chart with a locally built image.
+## Once Argo CD manages the app (make argocd-app), selfHeal reverts this: use Git instead.
 deploy: load
 	helm upgrade --install kubegotchi charts/kubegotchi --namespace pet --create-namespace \
-		--set-string image.tag=$(TAG)
+		--set image.repository=kubegotchi --set-string image.tag=$(TAG)
 
 ## Everything at once
 up: cluster deploy
@@ -60,6 +61,12 @@ argocd:
 	helm repo add argo https://argoproj.github.io/argo-helm --force-update
 	helm upgrade --install argocd argo/argo-cd --version $(ARGOCD_CHART_VERSION) \
 		--namespace argocd --create-namespace -f gitops/argocd/values.yaml --wait --timeout 5m
+
+## Hand the pet over to Argo CD. Deleting the Helm release secrets only makes
+## Helm forget the release: the running resources stay and Argo CD adopts them.
+argocd-app:
+	kubectl apply -f gitops/apps/kubegotchi.yaml
+	kubectl -n pet delete secret -l owner=helm,name=kubegotchi --ignore-not-found
 
 ## Initial admin password (change it in the UI and delete the secret afterwards)
 argocd-password:
