@@ -32,11 +32,11 @@ Every phase ends with something working and visible. Check items off as you go.
 
 ## Phase 2: GitOps (1 week)
 - [x] Push the repo to GitHub and watch CI pass
-- [ ] Publish the image to GitHub Container Registry (ghcr.io)
-- [ ] Install Argo CD in the cluster
-- [ ] Create an Argo CD `Application` pointing at `charts/kubegotchi`
-- [ ] CI bumps the image tag in `values.yaml` on every push
-- [ ] Change `petName` through a commit and watch Argo CD sync on its own
+- [x] Publish the image to GitHub Container Registry (ghcr.io)
+- [x] Install Argo CD in the cluster
+- [x] Create an Argo CD `Application` pointing at `charts/kubegotchi`
+- [x] CI bumps the image tag in `values.yaml` on every push
+- [x] Change `petName` through a commit and watch Argo CD sync on its own
 - [ ] Roll back through Argo CD
 
 **Done when:** a `git push` changes the pet without any manual `kubectl`.
