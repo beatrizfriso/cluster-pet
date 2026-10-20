@@ -28,6 +28,10 @@ curl localhost:8000/metrics | grep kubegotchi
 make up           # creates the cluster, builds the image, installs the chart
 curl localhost:8080/status            # through the Ingress
 curl -X POST localhost:8080/feed
+
+# Phase 2: Argo CD deploys from Git (after this, change the pet through PRs)
+make argocd       # installs Argo CD, UI at http://argocd.localhost:8080
+make argocd-app   # hands the pet over to Argo CD
 ```
 
 > On Windows PowerShell, `curl` is an alias for `Invoke-WebRequest`. Use `curl.exe`.

@@ -37,7 +37,7 @@ Every phase ends with something working and visible. Check items off as you go.
 - [x] Create an Argo CD `Application` pointing at `charts/kubegotchi`
 - [x] CI bumps the image tag in `values.yaml` on every push
 - [x] Change `petName` through a commit and watch Argo CD sync on its own
-- [ ] Roll back through Argo CD
+- [x] Roll back through Argo CD (skipped hands-on: with `selfHeal` on, a rollback is a `git revert` of the `chore(deploy)` commit; see [docs/phase-2.md](docs/phase-2.md#rollback))
 
 **Done when:** a `git push` changes the pet without any manual `kubectl`.
 
