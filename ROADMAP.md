@@ -31,7 +31,7 @@ Every phase ends with something working and visible. Check items off as you go.
 ---
 
 ## Phase 2: GitOps (1 week)
-- [ ] Push the repo to GitHub and watch CI pass
+- [x] Push the repo to GitHub and watch CI pass
 - [ ] Publish the image to GitHub Container Registry (ghcr.io)
 - [ ] Install Argo CD in the cluster
 - [ ] Create an Argo CD `Application` pointing at `charts/kubegotchi`
@@ -76,6 +76,7 @@ Every phase ends with something working and visible. Check items off as you go.
 ## Phase 5: mistreat the pet, lovingly (1–2 weeks)
 - [ ] Install Chaos Mesh
 - [ ] Experiments: `PodChaos` (pod-kill), `NetworkChaos` (latency), `StressChaos` (CPU)
+- [ ] Zero-downtime rollouts: a `preStop` sleep so Traefik stops routing before the pod dies (a `Gateway Timeout` showed up during the v0.1.0 deploy)
 - [ ] Burn rate alerts in Alertmanager
 - [ ] A runbook in `docs/runbooks/` for every alert
 - [ ] First game day: injected failure → alert → diagnosis → cure → postmortem
@@ -98,7 +99,7 @@ Every phase ends with something working and visible. Check items off as you go.
 ## Releases (one per completed phase)
 A release is a versioned milestone, not a deploy: Argo CD keeps deploying every
 merge to `main` by commit SHA.
-- [ ] End of Phase 1: manual `v0.1.0` (`git tag` + `gh release create --generate-notes`), aligned with `version`/`appVersion` in `Chart.yaml`
+- [x] End of Phase 1: manual `v0.1.0` (`git tag` + `gh release create --generate-notes`), aligned with `version`/`appVersion` in `Chart.yaml`
 - [ ] Phase 2: workflow that, on a `v*` tag, publishes the image `ghcr.io/<user>/kubegotchi:<version>`
 - [ ] Later: automate with release-please (version and changelog from Conventional Commits)
 
