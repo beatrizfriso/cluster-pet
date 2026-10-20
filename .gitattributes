@@ -1,0 +1,5 @@
+# LF everywhere: CI runs on Linux, and CRLF breaks shell scripts and Makefiles
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
