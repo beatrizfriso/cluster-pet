@@ -8,7 +8,7 @@ Cada fase termina com algo funcionando e visível. Marque os itens conforme avan
 - [x] App com `/status`, `/feed`, `/play`, `/sleep`
 - [x] Métricas em `/metrics`
 - [x] Dockerfile rodando como não-root
-- [ ] Rodar com `make run` e brincar com ele pelo curl
+- [x] Rodar com `make run` e brincar com ele pelo curl
 - [ ] Ler o `main.py` inteiro e entender cada métrica
 
 **Pronto quando:** você alimenta o bichinho e vê `kubegotchi_stat` mudar em `/metrics`.
@@ -18,9 +18,9 @@ Cada fase termina com algo funcionando e visível. Marque os itens conforme avan
 ## Fase 1: ele mora no Kubernetes (1–2 semanas)
 - [ ] Criar o cluster com `make cluster` e explorar com `kubectl get nodes,pods -A`
 - [ ] `make deploy` e entender cada campo do `deployment.yaml`
-- [ ] Matar um pod (`kubectl delete pod`) e ver o Deployment recriá-lo
-- [ ] Quebrar a liveness probe de propósito e observar o CrashLoopBackOff
-- [ ] Baixar o limit de memória até ver um OOMKilled
+- [x] Matar um pod (`kubectl delete pod`) e ver o Deployment recriá-lo
+- [x] Quebrar a liveness probe de propósito e observar o CrashLoopBackOff
+- [x] Baixar o limit de memória até ver um OOMKilled
 - [ ] Adicionar um Ingress no chart para acessar em `localhost:8080`
 - [ ] Adicionar um HorizontalPodAutoscaler
 
