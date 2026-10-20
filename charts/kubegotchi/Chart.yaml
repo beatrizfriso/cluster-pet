@@ -1,6 +1,6 @@
 apiVersion: v2
 name: kubegotchi
-description: Um bichinho virtual cuja saúde é o seu cluster
+description: A virtual pet whose health is your cluster
 type: application
 version: 0.1.0
 appVersion: "0.1.0"

@@ -3,7 +3,7 @@ __pycache__/
 .venv/
 .env
 .env.*
-# Credenciais e acesso a clusters nunca vão para o Git
+# Credentials and cluster access never go into Git
 *.pem
 *.key
 kubeconfig*
@@ -11,3 +11,8 @@ kubeconfig*
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
+
+# Local Claude Code skills
+.agents/
+.claude/
+skills-lock.json

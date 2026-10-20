@@ -5,7 +5,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY main.py .
 
-# Rodar como usuário não-root (boa prática que a Fase 6 vai cobrar)
+# Run as a non-root user (good practice that Phase 6 will enforce)
 RUN useradd --uid 10001 --no-create-home pet
 USER 10001
 

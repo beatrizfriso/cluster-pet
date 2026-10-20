@@ -9,7 +9,7 @@ metadata:
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:
-    # Sem ingress.host a regra vale para qualquer nome (localhost incluso)
+    # Without ingress.host the rule matches any name (localhost included)
     - http:
         paths:
           - path: /
