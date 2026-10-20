@@ -39,6 +39,9 @@ spec:
               value: {{ .Values.chaos.latencyMs | quote }}
             - name: CHAOS_ERROR_RATE
               value: {{ .Values.chaos.errorRate | quote }}
+            # Lets /status show which image is running (handy to watch deploys and rollbacks)
+            - name: APP_VERSION
+              value: {{ .Values.image.tag | quote }}
           livenessProbe:
             httpGet:
               path: /healthz
