@@ -1,0 +1,23 @@
+# Pyrra SLO operator and UI (gitops/pyrra/)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pyrra
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io/background
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/beatrizfriso/cluster-pet.git
+    targetRevision: main
+    path: gitops/pyrra
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
