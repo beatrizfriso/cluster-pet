@@ -1,0 +1,4 @@
+-r requirements.txt
+pytest==8.3.*
+# o TestClient do FastAPI usa httpx por baixo
+httpx==0.27.*

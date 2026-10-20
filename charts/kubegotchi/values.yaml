@@ -1,0 +1,36 @@
+petName: Bolinha
+# Quanto cada status cai por minuto
+decayPerMinute: 2
+# 1 réplica de propósito: o estado do bichinho vive na memória do pod, então
+# com 2+ réplicas cada pod seria um bichinho diferente (alimenta um, consulta
+# outro). Na Fase 4 o estado passa a vir do Prometheus (/vitals), o app fica
+# stateless e aí dá para escalar. Experimente subir para 2 e ver o problema.
+replicaCount: 1
+
+image:
+  repository: kubegotchi
+  tag: dev
+  pullPolicy: IfNotPresent
+
+service:
+  port: 80
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 128Mi
+
+# "Maltratar" o bichinho de propósito (Fase 3 em diante)
+chaos:
+  latencyMs: 0
+  errorRate: 0
+
+# Ligue na Fase 3, depois de instalar o kube-prometheus-stack
+serviceMonitor:
+  enabled: false
+  interval: 15s
+  # label que o Prometheus do kube-prometheus-stack procura
+  release: monitoring
