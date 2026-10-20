@@ -50,7 +50,7 @@ Every phase ends with something working and visible. Check items off as you go.
 - [x] Define SLOs with Sloth or Pyrra (e.g. 99% availability over 7 days)
 - [x] Grafana dashboard: pet status + remaining error budget
 - [x] Turn on chaos and watch the budget burn (procedure and results in [docs/phase-3.md](docs/phase-3.md#chaos-experiment-burning-the-budget))
-- [ ] Fix startup restarts under CPU throttling: `startupProbe` + CPU limit (found by the chaos experiment)
+- [x] Fix startup restarts under CPU throttling: `startupProbe` + CPU limit (found by the chaos experiment)
 
 **Done when:** Grafana shows how much error budget is left and the burn rate.
 
