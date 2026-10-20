@@ -44,7 +44,9 @@ resources:
 # "Mistreat" the pet on purpose (Phase 3 onward)
 chaos:
   latencyMs: 0
-  errorRate: 0
+  # EXPERIMENT (Phase 3): half the requests fail with 500 to burn the error
+  # budget. Revert this PR to stop it: at 50x burn the 7d budget is gone in ~3.4h.
+  errorRate: 0.5
 
 # Per-route app metrics, used to diagnose which endpoint burns the SLO.
 # The SLOs themselves are measured at Traefik (gitops/monitoring/).
