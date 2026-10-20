@@ -7,6 +7,15 @@ decayPerMinute: 2
 # stateless e aí dá para escalar. Experimente subir para 2 e ver o problema.
 replicaCount: 1
 
+# Desligado pelo mesmo motivo do replicaCount: com 2+ réplicas o estado se
+# divide. Ligue para ver o problema; vira útil de verdade na Fase 4.
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  # % do requests.cpu (50m): acima de ~30m por pod, o HPA escala
+  targetCPUUtilizationPercentage: 60
+
 image:
   repository: kubegotchi
   tag: dev
@@ -14,6 +23,13 @@ image:
 
 service:
   port: 80
+
+# Traefik já vem no k3s; o k3d expõe ele em localhost:8080 (k3d/cluster.yaml)
+ingress:
+  enabled: true
+  className: traefik
+  # Vazio aceita qualquer host. Ex.: "kubegotchi.localhost" para separar por nome
+  host: ""
 
 resources:
   requests:
