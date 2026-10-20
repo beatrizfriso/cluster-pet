@@ -1,0 +1,52 @@
+# Pyrra: turns ServiceLevelObjective resources into Prometheus recording and
+# multi-window burn-rate alert rules, and serves an error budget UI.
+#
+# upstream/ is a verbatim copy of examples/kubernetes/manifests from
+# github.com/pyrra-dev/pyrra at tag v0.10.2 (commit 62d8d85). Changes are made
+# only through the patches below, so upgrading means re-copying that folder.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: monitoring
+resources:
+  - upstream/pyrra-slo-CustomResourceDefinition.yaml
+  - upstream/pyrra-apiServiceAccount.yaml
+  - upstream/pyrra-apiDeployment.yaml
+  - upstream/pyrra-apiService.yaml
+  - upstream/pyrra-apiServiceMonitor.yaml
+  - upstream/pyrra-kubernetesServiceAccount.yaml
+  - upstream/pyrra-kubernetesClusterRole.yaml
+  - upstream/pyrra-kubernetesClusterRoleBinding.yaml
+  - upstream/pyrra-kubernetesDeployment.yaml
+  - upstream/pyrra-kubernetesService.yaml
+  - upstream/pyrra-kubernetesServiceMonitor.yaml
+  - ingress.yaml
+
+# The upstream example still references v0.9.0
+images:
+  - name: ghcr.io/pyrra-dev/pyrra
+    newTag: v0.10.2
+
+patches:
+  # Point the UI at this cluster's Prometheus (upstream assumes kube-prometheus)
+  - target:
+      kind: Deployment
+      name: pyrra-api
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/args
+        value:
+          - api
+          - --api-url=http://pyrra-kubernetes.monitoring.svc.cluster.local:9444
+          - --prometheus-url=http://monitoring-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090
+          - --prometheus-external-url=http://prometheus.localhost:8080
+  # No webhook TLS certs in this setup; generic rules feed the Grafana dashboards
+  - target:
+      kind: Deployment
+      name: pyrra-kubernetes
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/args
+        value:
+          - kubernetes
+          - --disable-webhooks
+          - --generic-rules

@@ -1,0 +1,22 @@
+# 95% of requests to the pet answered in under 300ms, over 7 days.
+# "Share of requests under a threshold" instead of p95: it adds up across
+# time windows and yields an error budget, which a percentile does not.
+# The p95 itself lives on the Grafana dashboard. 0.3 is an existing bucket
+# of Traefik's histogram (0.1, 0.3, 1.2, 5).
+apiVersion: pyrra.dev/v1alpha1
+kind: ServiceLevelObjective
+metadata:
+  name: pet-latency
+  namespace: monitoring
+  labels:
+    slo: pet
+spec:
+  description: Owners get an answer from the pet in under 300ms.
+  target: "95"
+  window: 7d
+  indicator:
+    latency:
+      success:
+        metric: traefik_service_request_duration_seconds_bucket{service="pet-kubegotchi-http@kubernetes",le="0.3"}
+      total:
+        metric: traefik_service_request_duration_seconds_count{service="pet-kubegotchi-http@kubernetes"}

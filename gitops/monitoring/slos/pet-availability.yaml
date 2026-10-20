@@ -1,0 +1,21 @@
+# 99% of requests to the pet answered without a 5xx, over 7 days.
+# Measured at Traefik, so a dead pod (502/503) or a rollout gap (504) counts
+# as an error. 4xx are the caller's mistake and don't burn the budget.
+# Budget: 1% of requests (~1.7h of full outage per week).
+apiVersion: pyrra.dev/v1alpha1
+kind: ServiceLevelObjective
+metadata:
+  name: pet-availability
+  namespace: monitoring
+  labels:
+    slo: pet
+spec:
+  description: Owners can reach the pet without a server error.
+  target: "99"
+  window: 7d
+  indicator:
+    ratio:
+      errors:
+        metric: traefik_service_requests_total{service="pet-kubegotchi-http@kubernetes",code=~"5.."}
+      total:
+        metric: traefik_service_requests_total{service="pet-kubegotchi-http@kubernetes"}

@@ -1,0 +1,18 @@
+# Error budget UI at http://pyrra.localhost:8080
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pyrra
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: pyrra.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pyrra-api
+                port:
+                  name: http
