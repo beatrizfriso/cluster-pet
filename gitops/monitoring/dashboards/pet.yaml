@@ -1,0 +1,142 @@
+# "Kubegotchi / Vital signs" dashboard. The Grafana sidecar loads every
+# ConfigMap labeled grafana_dashboard: "1". Edits made in the Grafana UI are
+# lost on restart: change this file instead.
+#
+# SLO math is computed straight from Traefik's counters (the same SLIs as the
+# Pyrra SLOs in ../slos/), so the dashboard works even if Pyrra is down.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-kubegotchi
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  kubegotchi.json: |-
+    {
+      "uid": "kubegotchi",
+      "title": "Kubegotchi / Vital signs",
+      "tags": ["kubegotchi", "slo"],
+      "timezone": "browser",
+      "refresh": "30s",
+      "time": { "from": "now-6h", "to": "now" },
+      "schemaVersion": 39,
+      "editable": true,
+      "panels": [
+        {
+          "type": "row", "title": "SLOs (7-day window, measured at Traefik)",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "collapsed": false, "panels": []
+        },
+        {
+          "type": "stat", "title": "Availability (target 99%)",
+          "description": "Share of requests without a 5xx over the last 7 days.",
+          "gridPos": { "h": 5, "w": 6, "x": 0, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "refId": "A", "expr": "1 - (sum(increase(traefik_service_requests_total{service=\"pet-kubegotchi-http@kubernetes\",code=~\"5..\"}[7d])) or vector(0)) / sum(increase(traefik_service_requests_total{service=\"pet-kubegotchi-http@kubernetes\"}[7d]))" }],
+          "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 3,
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null }, { "color": "green", "value": 0.99 } ] } }, "overrides": [] },
+          "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+        },
+        {
+          "type": "stat", "title": "Availability error budget left",
+          "description": "100% = no errors this week; 0% = SLO broken. Budget is 1% of requests.",
+          "gridPos": { "h": 5, "w": 6, "x": 6, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "refId": "A", "expr": "1 - ((sum(increase(traefik_service_requests_total{service=\"pet-kubegotchi-http@kubernetes\",code=~\"5..\"}[7d])) or vector(0)) / sum(increase(traefik_service_requests_total{service=\"pet-kubegotchi-http@kubernetes\"}[7d]))) / 0.01" }],
+          "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 1,
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null }, { "color": "orange", "value": 0 },
+              { "color": "yellow", "value": 0.25 }, { "color": "green", "value": 0.5 } ] } }, "overrides": [] },
+          "options": { "colorMode": "background", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } }
+        },
+        {
+          "type": "stat", "title": "Latency: requests under 300ms (target 95%)",
+          "description": "Share of requests answered in under 300ms over the last 7 days.",
+          "gridPos": { "h": 5, "w": 6, "x": 12, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "refId": "A", "expr": "sum(increase(traefik_service_request_duration_seconds_bucket{service=\"pet-kubegotchi-http@kubernetes\",le=\"0.3\"}[7d])) / sum(increase(traefik_service_request_duration_seconds_count{service=\"pet-kubegotchi-http@kubernetes\"}[7d]))" }],
+          "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 2,
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null }, { "color": "green", "value": 0.95 } ] } }, "overrides": [] },
+          "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+        },
+        {
+          "type": "stat", "title": "Latency error budget left",
+          "description": "Budget is 5% of requests allowed above 300ms.",
+          "gridPos": { "h": 5, "w": 6, "x": 18, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "refId": "A", "expr": "1 - (1 - sum(increase(traefik_service_request_duration_seconds_bucket{service=\"pet-kubegotchi-http@kubernetes\",le=\"0.3\"}[7d])) / sum(increase(traefik_service_request_duration_seconds_count{service=\"pet-kubegotchi-http@kubernetes\"}[7d]))) / 0.05" }],
+          "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 1,
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "red", "value": null }, { "color": "orange", "value": 0 },
+              { "color": "yellow", "value": 0.25 }, { "color": "green", "value": 0.5 } ] } }, "overrides": [] },
+          "options": { "colorMode": "background", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } }
+        },
+        {
+          "type": "timeseries", "title": "Availability burn rate (1h)",
+          "description": "1 = spending budget exactly fast enough to run out at the end of the 7 days. Above 1, it runs out early.",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "refId": "A", "legendFormat": "burn rate",
+            "expr": "((sum(rate(traefik_service_requests_total{service=\"pet-kubegotchi-http@kubernetes\",code=~\"5..\"}[1h])) or vector(0)) / sum(rate(traefik_service_requests_total{service=\"pet-kubegotchi-http@kubernetes\"}[1h]))) / 0.01" }],
+          "fieldConfig": { "defaults": { "unit": "x", "min": 0,
+            "custom": { "thresholdsStyle": { "mode": "line+area" } },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "transparent", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [] }
+        },
+        {
+          "type": "timeseries", "title": "Requests per second by status (Traefik)",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "refId": "A", "legendFormat": "{{code}}",
+            "expr": "sum by (code) (rate(traefik_service_requests_total{service=\"pet-kubegotchi-http@kubernetes\"}[5m]))" }],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "stacking": { "mode": "normal" }, "fillOpacity": 30 } }, "overrides": [] }
+        },
+        {
+          "type": "timeseries", "title": "Latency p50 / p95 / p99 (Traefik)",
+          "description": "Estimated from Traefik's histogram buckets (0.1, 0.3, 1.2, 5s), so values are interpolated.",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "refId": "A", "legendFormat": "p50", "expr": "histogram_quantile(0.50, sum by (le) (rate(traefik_service_request_duration_seconds_bucket{service=\"pet-kubegotchi-http@kubernetes\"}[5m])))" },
+            { "refId": "B", "legendFormat": "p95", "expr": "histogram_quantile(0.95, sum by (le) (rate(traefik_service_request_duration_seconds_bucket{service=\"pet-kubegotchi-http@kubernetes\"}[5m])))" },
+            { "refId": "C", "legendFormat": "p99", "expr": "histogram_quantile(0.99, sum by (le) (rate(traefik_service_request_duration_seconds_bucket{service=\"pet-kubegotchi-http@kubernetes\"}[5m])))" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "s", "min": 0,
+            "custom": { "thresholdsStyle": { "mode": "line" } },
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "transparent", "value": null }, { "color": "red", "value": 0.3 } ] } }, "overrides": [] }
+        },
+        {
+          "type": "timeseries", "title": "5xx by route (app metrics, for diagnosis)",
+          "description": "When the availability budget burns, this shows which endpoint is failing. Empty while there are no errors.",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "refId": "A", "legendFormat": "{{path}} {{code}}",
+            "expr": "sum by (path, code) (rate(kubegotchi_http_requests_total{code=~\"5..\"}[5m]))" }],
+          "fieldConfig": { "defaults": { "unit": "reqps", "min": 0, "noValue": "no errors" }, "overrides": [] }
+        },
+        {
+          "type": "row", "title": "The pet",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 }, "collapsed": false, "panels": []
+        },
+        {
+          "type": "timeseries", "title": "Stats (0-100)",
+          "gridPos": { "h": 8, "w": 18, "x": 0, "y": 23 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "refId": "A", "legendFormat": "{{stat}}", "expr": "max by (stat) (kubegotchi_stat)" }],
+          "fieldConfig": { "defaults": { "min": 0, "max": 100 }, "overrides": [] }
+        },
+        {
+          "type": "stat", "title": "Pod restarts (1h)",
+          "gridPos": { "h": 8, "w": 6, "x": 18, "y": 23 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "refId": "A", "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"pet\"}[1h]))" }],
+          "fieldConfig": { "defaults": { "decimals": 0,
+            "thresholds": { "mode": "absolute", "steps": [
+              { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [] },
+          "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+        }
+      ]
+    }
