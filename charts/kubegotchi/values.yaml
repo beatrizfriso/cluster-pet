@@ -38,7 +38,9 @@ resources:
     cpu: 50m
     memory: 64Mi
   limits:
-    cpu: 250m
+    # 250m throttled the container in ~18% of CFS periods (CPUThrottlingHigh)
+    # and made startup slow enough for liveness to kill it
+    cpu: 500m
     memory: 128Mi
 
 # "Mistreat" the pet on purpose (Phase 3 onward)
