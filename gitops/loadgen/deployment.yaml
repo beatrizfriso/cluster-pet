@@ -19,6 +19,14 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 100
+      # With the default ndots:5, the 4-dot Traefik name is first tried against
+      # every search domain. When one of those UDP queries is lost, musl (Alpine)
+      # retries only after 5s, curl hits its -m 5 timeout and logs code 000 (~1%
+      # of requests). ndots:2 resolves dotted names directly.
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "2"
       containers:
         - name: owners
           image: curlimages/curl:8.11.1
