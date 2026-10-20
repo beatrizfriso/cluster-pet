@@ -1,4 +1,4 @@
-petName: Bolinha
+petName: Pipoca
 # How much each stat drops per minute
 decayPerMinute: 2
 # 1 replica on purpose: the pet's state lives in the pod's memory, so with
