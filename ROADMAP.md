@@ -1,122 +1,123 @@
-# 🗺️ Roadmap do Kubegotchi
+# 🗺️ Kubegotchi Roadmap
 
-Cada fase termina com algo funcionando e visível. Marque os itens conforme avança.
-
----
-
-## Fase 0: o bichinho existe ✅ (já vem pronto no repo)
-- [x] App com `/status`, `/feed`, `/play`, `/sleep`
-- [x] Métricas em `/metrics`
-- [x] Dockerfile rodando como não-root
-- [x] Rodar com `make run` e brincar com ele pelo curl
-- [ ] Ler o `main.py` inteiro e entender cada métrica
-
-**Pronto quando:** você alimenta o bichinho e vê `kubegotchi_stat` mudar em `/metrics`.
+Every phase ends with something working and visible. Check items off as you go.
 
 ---
 
-## Fase 1: ele mora no Kubernetes (1–2 semanas)
-- [x] Criar o cluster com `make cluster` e explorar com `kubectl get nodes,pods -A`
-- [ ] `make deploy` e entender cada campo do `deployment.yaml`
-- [x] Matar um pod (`kubectl delete pod`) e ver o Deployment recriá-lo
-- [x] Quebrar a liveness probe de propósito e observar o CrashLoopBackOff
-- [x] Baixar o limit de memória até ver um OOMKilled
-- [x] Adicionar um Ingress no chart para acessar em `localhost:8080`
-- [x] Adicionar um HorizontalPodAutoscaler
+## Phase 0: the pet exists ✅ (ships ready in the repo)
+- [x] App with `/status`, `/feed`, `/play`, `/sleep`
+- [x] Metrics at `/metrics`
+- [x] Dockerfile running as non-root
+- [x] Run it with `make run` and play with it using curl
+- [ ] Read all of `main.py` and understand every metric
 
-**Pronto quando:** você mata pods e o bichinho continua vivo.
-
-**Conceitos:** Pod, Deployment, ReplicaSet, Service, probes, requests/limits, Helm templates.
+**Done when:** you feed the pet and see `kubegotchi_stat` change in `/metrics`.
 
 ---
 
-## Fase 2: GitOps (1 semana)
-- [ ] Subir o repo no GitHub e ver o CI passar
-- [ ] Publicar a imagem no GitHub Container Registry (ghcr.io)
-- [ ] Instalar o Argo CD no cluster
-- [ ] Criar uma `Application` do Argo CD apontando para `charts/kubegotchi`
-- [ ] CI atualiza a tag da imagem no `values.yaml` a cada push
-- [ ] Mudar o `petName` via commit e ver o Argo CD sincronizar sozinho
-- [ ] Fazer um rollback pelo Argo CD
+## Phase 1: it lives on Kubernetes (1–2 weeks)
+- [x] Create the cluster with `make cluster` and explore it with `kubectl get nodes,pods -A`
+- [ ] `make deploy` and understand every field in `deployment.yaml`
+- [x] Kill a pod (`kubectl delete pod`) and watch the Deployment recreate it
+- [x] Break the liveness probe on purpose and watch the CrashLoopBackOff
+- [x] Lower the memory limit until you see an OOMKilled
+- [x] Add an Ingress to the chart to reach it at `localhost:8080`
+- [x] Add a HorizontalPodAutoscaler
 
-**Pronto quando:** um `git push` muda o bichinho sem nenhum `kubectl` manual.
+**Done when:** you kill pods and the pet stays alive.
+
+**Concepts:** Pod, Deployment, ReplicaSet, Service, probes, requests/limits, Helm templates.
 
 ---
 
-## Fase 3: os sinais vitais (2 semanas)
-- [ ] Instalar o `kube-prometheus-stack` (release `monitoring`)
-- [ ] Ligar `serviceMonitor.enabled=true` e achar as métricas no Prometheus
-- [ ] Escrever as queries PromQL dos SLIs (disponibilidade e latência p95)
-- [ ] Definir SLOs com Sloth ou Pyrra (ex.: 99% de disponibilidade em 7 dias)
-- [ ] Dashboard no Grafana: status do bichinho + error budget restante
-- [ ] Ligar o chaos (`chaos.errorRate=0.05`) e ver o budget queimar
+## Phase 2: GitOps (1 week)
+- [ ] Push the repo to GitHub and watch CI pass
+- [ ] Publish the image to GitHub Container Registry (ghcr.io)
+- [ ] Install Argo CD in the cluster
+- [ ] Create an Argo CD `Application` pointing at `charts/kubegotchi`
+- [ ] CI bumps the image tag in `values.yaml` on every push
+- [ ] Change `petName` through a commit and watch Argo CD sync on its own
+- [ ] Roll back through Argo CD
 
-**Pronto quando:** o Grafana mostra quanto error budget sobra e a taxa de queima.
+**Done when:** a `git push` changes the pet without any manual `kubectl`.
 
-**Ideia de mapeamento SLO → bichinho:**
-| Sinal do cluster | Vira |
+---
+
+## Phase 3: vital signs (2 weeks)
+- [ ] Install `kube-prometheus-stack` (release `monitoring`)
+- [ ] Turn on `serviceMonitor.enabled=true` and find the metrics in Prometheus
+- [ ] Write the PromQL queries for the SLIs (availability and p95 latency)
+- [ ] Define SLOs with Sloth or Pyrra (e.g. 99% availability over 7 days)
+- [ ] Grafana dashboard: pet status + remaining error budget
+- [ ] Turn on chaos (`chaos.errorRate=0.05`) and watch the budget burn
+
+**Done when:** Grafana shows how much error budget is left and the burn rate.
+
+**SLO → pet mapping idea:**
+| Cluster signal | Becomes |
 |---|---|
-| Disponibilidade / error budget | saúde (doente quando o budget acaba) |
-| Latência p95 | humor |
-| Uso de CPU e memória vs limits | fome e energia |
-| Restarts de pod | machucados |
+| Availability / error budget | health (sick when the budget runs out) |
+| p95 latency | mood |
+| CPU and memory usage vs limits | hunger and energy |
+| Pod restarts | injuries |
 
 ---
 
-## Fase 4: o bichinho tem cara (1–2 semanas)
-- [ ] Endpoint `/vitals` que consulta o Prometheus e devolve o estado calculado pelos SLOs
-- [ ] Frontend que desenha o bichinho reagindo em tempo real
-- [ ] Gerador de tráfego com k6 simulando o dia a dia
-- [ ] Frontend deployado no cluster pelo mesmo chart (ou um chart irmão)
+## Phase 4: the pet gets a face (1–2 weeks)
+- [ ] `/vitals` endpoint that queries Prometheus and returns the state computed from the SLOs
+- [ ] Frontend that draws the pet reacting in real time
+- [ ] k6 traffic generator simulating day-to-day load
+- [ ] Frontend deployed to the cluster by the same chart (or a sibling chart)
 
-**Pronto quando:** você abre a página e o bichinho reage ao que acontece no cluster.
-
----
-
-## Fase 5: maltratar o bichinho, com carinho (1–2 semanas)
-- [ ] Instalar o Chaos Mesh
-- [ ] Experimentos: `PodChaos` (pod-kill), `NetworkChaos` (latência), `StressChaos` (CPU)
-- [ ] Alertas de burn rate no Alertmanager
-- [ ] Um runbook em `docs/runbooks/` para cada alerta
-- [ ] Primeiro game day: falha injetada → alerta → diagnóstico → cura → postmortem
-
-**Pronto quando:** você cura o bichinho seguindo só o runbook.
+**Done when:** you open the page and the pet reacts to what happens in the cluster.
 
 ---
 
-## Fase 6: o veterinário de AI (2–3 semanas)
-- [ ] ServiceAccount própria com RBAC só de leitura (`get`, `list`, `watch`)
-- [ ] Agente que lê alertas, métricas (API do Prometheus), eventos e logs
-- [ ] Modo diagnóstico: explica o problema e sugere o comando
-- [ ] Modo "aplicar com aprovação", com RBAC mínimo para as ações permitidas
-- [ ] Registrar cada diagnóstico (bom material para avaliar o agente)
+## Phase 5: mistreat the pet, lovingly (1–2 weeks)
+- [ ] Install Chaos Mesh
+- [ ] Experiments: `PodChaos` (pod-kill), `NetworkChaos` (latency), `StressChaos` (CPU)
+- [ ] Burn rate alerts in Alertmanager
+- [ ] A runbook in `docs/runbooks/` for every alert
+- [ ] First game day: injected failure → alert → diagnosis → cure → postmortem
 
-**Pronto quando:** um experimento do Chaos Mesh dispara e o agente explica a causa certa.
-
----
-
-## Releases (uma por fase concluída)
-Release é um marco versionado, não um deploy: o Argo CD continua fazendo deploy
-de cada merge na `main` pelo SHA do commit.
-- [ ] Fim da Fase 1: `v0.1.0` manual (`git tag` + `gh release create --generate-notes`), alinhada com `version`/`appVersion` do `Chart.yaml`
-- [ ] Fase 2: workflow que, numa tag `v*`, publica a imagem `ghcr.io/<user>/kubegotchi:<versão>`
-- [ ] Depois: automatizar com release-please (versão e changelog a partir dos Conventional Commits)
+**Done when:** you cure the pet by following only the runbook.
 
 ---
 
-## Bônus
-- [ ] O bichinho evolui conforme a confiabilidade de longo prazo
-- [ ] Postmortem gerado pela AI depois de cada game day
-- [ ] Vários bichinhos (um por namespace) disputando recursos
-- [ ] Placar de MTTR ao longo das semanas
+## Phase 6: the AI vet (2–3 weeks)
+- [ ] Dedicated ServiceAccount with read-only RBAC (`get`, `list`, `watch`)
+- [ ] Agent that reads alerts, metrics (Prometheus API), events and logs
+- [ ] Diagnosis mode: explains the problem and suggests the command
+- [ ] "Apply with approval" mode, with minimal RBAC for the allowed actions
+- [ ] Log every diagnosis (good material for evaluating the agent)
+
+**Done when:** a Chaos Mesh experiment fires and the agent explains the right cause.
 
 ---
 
-## Skills do Claude Code por fase
-| Fase | Skill |
+## Releases (one per completed phase)
+A release is a versioned milestone, not a deploy: Argo CD keeps deploying every
+merge to `main` by commit SHA.
+- [ ] End of Phase 1: manual `v0.1.0` (`git tag` + `gh release create --generate-notes`), aligned with `version`/`appVersion` in `Chart.yaml`
+- [ ] Phase 2: workflow that, on a `v*` tag, publishes the image `ghcr.io/<user>/kubegotchi:<version>`
+- [ ] Later: automate with release-please (version and changelog from Conventional Commits)
+
+---
+
+## Bonus
+- [ ] The pet evolves based on long-term reliability
+- [ ] AI-generated postmortem after every game day
+- [ ] Several pets (one per namespace) competing for resources
+- [ ] MTTR scoreboard over the weeks
+
+---
+
+## Claude Code skills per phase
+| Phase | Skill |
 |---|---|
-| Início | `/10x-team` (cria a pasta `.10x/` e faz o brainstorming) |
+| Start | `/10x-team` (creates the `.10x/` folder and runs the brainstorming) |
 | 1, 2, 5 | `/devops-engineer` |
 | 3, 5 | `/sre` |
-| 6 | `/security-engineer` (RBAC do agente) |
-| Código do app e do agente | `/sde` |
+| 6 | `/security-engineer` (agent RBAC) |
+| App and agent code | `/sde` |
+| Learning the concepts | `/teach` |

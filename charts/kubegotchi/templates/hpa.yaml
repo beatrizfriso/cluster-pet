@@ -14,7 +14,7 @@ spec:
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:
-    # Percentual sobre o requests.cpu (não sobre o limit)
+    # Percentage of requests.cpu (not of the limit)
     - type: Resource
       resource:
         name: cpu

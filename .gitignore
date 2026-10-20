@@ -3,7 +3,7 @@ __pycache__/
 .venv/
 .env
 .env.*
-# Credenciais e acesso a clusters nunca vão para o Git
+# Credentials and cluster access never go into Git
 *.pem
 *.key
 kubeconfig*

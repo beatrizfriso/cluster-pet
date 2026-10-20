@@ -1,6 +1,6 @@
-# CI básico: valida o chart e faz build da imagem.
-# Na Fase 2 você vai estender isso para publicar a imagem e atualizar a tag
-# que o Argo CD observa.
+# Basic CI: validates the chart and builds the image.
+# In Phase 2 you'll extend this to publish the image and bump the tag
+# that Argo CD watches.
 name: ci
 
 on:
@@ -8,17 +8,17 @@ on:
     branches: [main]
   pull_request:
 
-# Menor privilégio por padrão; cada job pede só o que precisa
+# Least privilege by default; each job asks only for what it needs
 permissions:
   contents: read
 
 jobs:
-  # Quebra o build se alguma secret for commitada (em qualquer commit, não só no último)
+  # Fails the build if any secret is committed (in any commit, not just the last one)
   secrets:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      # gitleaks lista os commits do PR via API
+      # gitleaks lists the PR commits through the API
       pull-requests: read
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +27,7 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # comentar no PR exigiria pull-requests: write; o job falhando já basta
+          # commenting on the PR would need pull-requests: write; a failing job is enough
           GITLEAKS_ENABLE_COMMENTS: false
 
   lint-and-build:
@@ -35,25 +35,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Instalar Helm
+      - name: Install Helm
         uses: azure/setup-helm@v4
       - name: Helm lint
         run: helm lint charts/kubegotchi
 
-      # Sem isso o pip tenta instalar no Python do sistema e falha (PEP 668)
+      # Without this pip tries to install into the system Python and fails (PEP 668)
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Testes unitários
+      - name: Unit tests
         run: |
           pip install -r app/requirements-dev.txt
           cd app && pytest -v
 
-      - name: Smoke test do app
+      - name: App smoke test
         run: |
           cd app && (uvicorn main:app --port 8000 &)
-          # espera o app subir em vez de um sleep fixo
+          # wait for the app to come up instead of a fixed sleep
           curl -sf --retry 15 --retry-delay 1 --retry-connrefused localhost:8000/status
           curl -sf -X POST localhost:8000/feed
           curl -sf localhost:8000/metrics | grep kubegotchi_stat

@@ -6,8 +6,8 @@ metadata:
     app.kubernetes.io/name: kubegotchi
     app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
-  # Com HPA ligado quem manda nas réplicas é ele; se o chart também definisse,
-  # cada helm upgrade voltaria o número para replicaCount
+  # With the HPA on, it owns the replica count; if the chart set it too,
+  # every helm upgrade would reset it to replicaCount
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}

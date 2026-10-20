@@ -1,11 +1,11 @@
-# Diário do Kubegotchi
+# Kubegotchi lab notes
 
-Anotações do que foi feito em cada fase do [ROADMAP](../ROADMAP.md): comandos, o que
-apareceu na tela, o que aquilo significa e os problemas que surgiram no caminho.
+Notes on what was done in each phase of the [ROADMAP](../ROADMAP.md): commands,
+what showed up on screen, what it means, and the problems hit along the way.
 
-| Fase | Anotações |
+| Phase | Notes |
 |---|---|
-| 0 | [O bichinho existe](fase-0.md) |
-| 1 | [Ele mora no Kubernetes](fase-1.md) |
+| 0 | [The pet exists](phase-0.md) |
+| 1 | [It lives on Kubernetes](phase-1.md) |
 
-Arquivos usados nos experimentos ficam em [`experiments/`](../experiments/).
+Files used in the experiments live in [`experiments/`](../experiments/).
