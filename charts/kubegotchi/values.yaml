@@ -16,9 +16,11 @@ autoscaling:
   # % of requests.cpu (50m): above ~30m per pod, the HPA scales out
   targetCPUUtilizationPercentage: 60
 
+# Published by CI (.github/workflows/ci.yaml). Argo CD deploys whatever tag is
+# here, so changing it in a commit is how a new version reaches the cluster.
 image:
-  repository: kubegotchi
-  tag: dev
+  repository: ghcr.io/beatrizfriso/kubegotchi
+  tag: sha-c4c846f
   pullPolicy: IfNotPresent
 
 service:
