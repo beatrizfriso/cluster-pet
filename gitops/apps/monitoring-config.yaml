@@ -10,6 +10,9 @@ spec:
     repoURL: https://github.com/beatrizfriso/cluster-pet.git
     targetRevision: main
     path: gitops/monitoring
+    # Directory sources ignore subfolders by default; the SLOs live in slos/
+    directory:
+      recurse: true
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:
