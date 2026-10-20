@@ -1,0 +1,21 @@
+# App of apps: Argo CD manages every Application in gitops/apps/.
+# Bootstrap once with: make argocd-app. After that, adding a file to
+# gitops/apps/ in a PR is all it takes to deploy something new.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/beatrizfriso/cluster-pet.git
+    targetRevision: main
+    path: gitops/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

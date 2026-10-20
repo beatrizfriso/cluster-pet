@@ -46,9 +46,10 @@ chaos:
   latencyMs: 0
   errorRate: 0
 
-# Turn on in Phase 3, after installing kube-prometheus-stack
+# Per-route app metrics, used to diagnose which endpoint burns the SLO.
+# The SLOs themselves are measured at Traefik (gitops/monitoring/).
 serviceMonitor:
-  enabled: false
+  enabled: true
   interval: 15s
   # label that the kube-prometheus-stack Prometheus looks for
   release: monitoring

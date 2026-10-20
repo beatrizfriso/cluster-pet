@@ -1,0 +1,79 @@
+# Prometheus, Grafana and Alertmanager (kube-prometheus-stack)
+# Grafana:    http://grafana.localhost:8080  (user admin, password: make grafana-password)
+# Prometheus: http://prometheus.localhost:8080
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io/background
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 92.11.0
+    helm:
+      # The pet chart's ServiceMonitor carries the label release: monitoring
+      releaseName: monitoring
+      valuesObject:
+        # k3s runs these inside the k3s process, not as pods: scraping them
+        # only produces "target down" alerts from minute one
+        kubeControllerManager:
+          enabled: false
+        kubeScheduler:
+          enabled: false
+        kubeEtcd:
+          enabled: false
+        kubeProxy:
+          enabled: false
+
+        prometheus:
+          ingress:
+            enabled: true
+            ingressClassName: traefik
+            hosts: [prometheus.localhost]
+          prometheusSpec:
+            # Pick up every ServiceMonitor/PodMonitor/PrometheusRule in the
+            # cluster, not only the ones labeled for this release
+            serviceMonitorSelectorNilUsesHelmValues: false
+            podMonitorSelectorNilUsesHelmValues: false
+            ruleSelectorNilUsesHelmValues: false
+            # Longer than the 7d SLO window, so the error budget has full history
+            retention: 8d
+            # Without a disk, every Prometheus restart would wipe the SLO history
+            storageSpec:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: local-path
+                  accessModes: [ReadWriteOnce]
+                  resources:
+                    requests:
+                      storage: 5Gi
+
+        grafana:
+          ingress:
+            enabled: true
+            ingressClassName: traefik
+            hosts: [grafana.localhost]
+          # Dashboards come from ConfigMaps in Git, not from clicks in the UI
+          sidecar:
+            dashboards:
+              enabled: true
+              searchNamespace: ALL
+
+        # Alert routing comes in Phase 5
+        alertmanager:
+          enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # The Prometheus Operator CRDs are too big for client-side apply
+      - ServerSideApply=true

@@ -29,3 +29,10 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      # The ServiceMonitor CRD comes from the monitoring app; on a fresh
+      # cluster it may not exist yet, so retry instead of failing the sync
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
