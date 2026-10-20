@@ -1,4 +1,4 @@
-# 🐣 Kubegotchi
+# 🐣 Kubegotchi - WIP
 
 Um bichinho virtual cuja saúde **é** o seu cluster Kubernetes.
 
