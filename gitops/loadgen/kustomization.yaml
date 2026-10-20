@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: loadgen
+resources:
+  - namespace.yaml
+  - deployment.yaml
+# The script lives in its own file; the hash suffix in the ConfigMap name
+# rolls the Deployment whenever the script changes
+configMapGenerator:
+  - name: owners-script
+    files:
+      - owners.sh
