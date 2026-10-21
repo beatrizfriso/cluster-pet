@@ -175,6 +175,7 @@ def test_spent_budget_is_a_critical_pet(prom):
     prom.scalars = {**HEALTHY, "budget": -3.76, "burn": 5.65}
     body = client.get("/vitals").json()
     assert body["vitals"]["health"]["value"] == 0
+    assert body["vitals"]["health"]["reading"] == "weekly error budget overspent by 376%"
     assert body["condition"] == "critical"
     assert body["fever"] is True
     assert body["burn_rate"] == 5.65
@@ -186,10 +187,16 @@ def test_latency_sets_the_mood(p95, mood):
     assert main._p95_to_mood(p95) == pytest.approx(mood)
 
 
-@pytest.mark.parametrize("restarts, injuries", [(0, 100), (1.03, 75), (2, 50), (6, 0)])
-def test_restarts_are_injuries(prom, restarts, injuries):
+@pytest.mark.parametrize("restarts, injuries, reading", [
+    (0, 100, "no restarts in the last 24h"),
+    (1.03, 75, "1 restart in the last 24h"),
+    (2, 50, "2 restarts in the last 24h"),
+    (6, 0, "6 restarts in the last 24h"),
+])
+def test_restarts_are_injuries(prom, restarts, injuries, reading):
     prom.scalars = {**HEALTHY, "restarts": restarts}
-    assert client.get("/vitals").json()["vitals"]["injuries"]["value"] == injuries
+    body = client.get("/vitals").json()["vitals"]["injuries"]
+    assert body == {"value": injuries, "reading": reading}
 
 
 def test_no_traffic_yet_is_not_a_failure(prom):
@@ -260,6 +267,23 @@ def test_unknown_path_does_not_create_new_series():
                   path="unmatched", method="GET", code="404") == before + 2
     assert sample("kubegotchi_http_requests_total",
                   path="/wp-admin", method="GET", code="404") == 0
+
+
+def test_frontend_is_served_at_the_root():
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "Vet chart" in r.text
+    assert client.get("/static/app.js").status_code == 200
+
+
+def test_frontend_assets_share_one_label():
+    before = sample("kubegotchi_http_requests_total", path="/static", method="GET", code="200")
+    client.get("/static/style.css")
+    client.get("/static/app.js")
+    assert sample("kubegotchi_http_requests_total",
+                  path="/static", method="GET", code="200") == before + 2
+    assert sample("kubegotchi_http_requests_total",
+                  path="/static/style.css", method="GET", code="200") == 0
 
 
 def test_wrong_method_uses_route_template():

@@ -1,0 +1,260 @@
+/* Kubegotchi: the page is the toy. One loud object (the translucent shell and
+   its LCD), everything else quiet on cluster blue. */
+:root {
+  --shell: #7fd8c3;        /* jelly mint plastic */
+  --shell-deep: #3e8f80;   /* plastic shadow and rim */
+  --lcd: #b4c0a3;          /* LCD background */
+  --ink: #253021;          /* LCD pixels */
+  --cluster: #1d3a7a;      /* page: the cluster the pet lives in */
+  --alert: #e5484d;        /* fever and a spent budget, nothing else */
+
+  --paper: #eaf0fa;        /* text on cluster blue */
+  --muted: #a9bbdf;
+  --rule: #2f509a;
+  --segment-off: #2a4a8f;
+
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-2: 1.75rem;
+  --step-3: 2.5rem;
+
+  --body: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --pixel: "Silkscreen", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--cluster);
+  color: var(--paper);
+  font: 400 var(--step-0)/1.5 var(--body);
+  display: flex;
+  flex-direction: column;
+}
+
+a { color: var(--shell); }
+a:focus-visible, button:focus-visible {
+  outline: 3px solid var(--paper);
+  outline-offset: 4px;
+}
+
+/* --- Header ------------------------------------------------------------ */
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1.5rem clamp(1rem, 4vw, 3rem) 0;
+}
+.top h1 {
+  margin: 0;
+  font-size: var(--step-3);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+.source {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+.source.live::before {
+  content: "";
+  display: inline-block;
+  width: 0.55em;
+  height: 0.55em;
+  margin-right: 0.45em;
+  border-radius: 50%;
+  background: var(--shell);
+  vertical-align: 0.05em;
+}
+.source.down::before { background: var(--alert); }
+
+/* --- Layout ------------------------------------------------------------ */
+.stage {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(18rem, 26rem) minmax(16rem, 32rem);
+  justify-content: center;
+  align-items: start;
+  gap: clamp(2rem, 6vw, 5rem);
+  padding: 2rem clamp(1rem, 4vw, 3rem) 3rem;
+}
+@media (max-width: 52rem) {
+  .stage { grid-template-columns: minmax(0, 26rem); }
+}
+
+/* --- The device (the one loud thing) ----------------------------------- */
+.device { justify-self: center; width: 100%; }
+
+.shell {
+  position: relative;
+  aspect-ratio: 0.86;
+  width: 100%;
+  border-radius: 50% 50% 46% 46% / 56% 56% 44% 44%;
+  /* translucent jelly plastic: light from top-left, rim darker */
+  background:
+    radial-gradient(ellipse 60% 40% at 32% 18%, rgb(255 255 255 / 0.55), transparent 70%),
+    radial-gradient(ellipse at 50% 60%, rgb(127 216 195 / 0.92), rgb(62 143 128 / 0.95) 78%);
+  box-shadow:
+    inset 0 -14px 28px rgb(37 48 33 / 0.25),
+    inset 0 10px 20px rgb(255 255 255 / 0.35),
+    0 24px 40px rgb(5 15 40 / 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8%;
+  padding: 16% 12% 12%;
+}
+
+.bezel {
+  width: 74%;
+  padding: 7%;
+  border-radius: 14% / 16%;
+  background: var(--shell-deep);
+  box-shadow: inset 0 3px 8px rgb(0 0 0 / 0.35);
+}
+
+#lcd {
+  display: block;
+  width: 100%;
+  aspect-ratio: 32 / 22;
+  image-rendering: pixelated;
+  border-radius: 4px;
+  /* faint LCD pixel grid, drawn under the canvas pixels */
+  background:
+    repeating-linear-gradient(0deg, rgb(37 48 33 / 0.05) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgb(37 48 33 / 0.05) 0 1px, transparent 1px 3px),
+    var(--lcd);
+}
+
+.lcd-line {
+  margin: 0.5rem 0 0;
+  min-height: 1.4em;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  background: var(--lcd);
+  color: var(--ink);
+  font: 400 0.75rem/1.4 var(--pixel);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.buttons {
+  display: flex;
+  justify-content: center;
+  gap: 9%;
+  width: 80%;
+}
+
+.key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 700 var(--step--1)/1 var(--body);
+  cursor: pointer;
+}
+.key .cap {
+  width: clamp(2.2rem, 7vw, 2.8rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a5a44, var(--ink) 70%);
+  box-shadow: 0 4px 0 #11170f, 0 6px 10px rgb(0 0 0 / 0.3);
+  transition: transform 80ms, box-shadow 80ms;
+}
+.key:active .cap,
+.key.pressed .cap {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #11170f, 0 2px 4px rgb(0 0 0 / 0.3);
+}
+.key:disabled { cursor: not-allowed; opacity: 0.55; }
+
+.hint {
+  margin: 1rem 0 0;
+  min-height: 1.5em;
+  color: var(--muted);
+  font-size: var(--step--1);
+  text-align: center;
+}
+
+/* --- Vet chart (quiet) -------------------------------------------------- */
+.chart h2 {
+  margin: 0 0 0.25rem;
+  font-size: var(--step-2);
+  line-height: 1.2;
+}
+.chart h3 {
+  margin: 2rem 0 0.5rem;
+  font-size: var(--step-0);
+  color: var(--muted);
+  font-weight: 700;
+}
+.condition {
+  margin: 0;
+  font-size: var(--step-1);
+  max-width: 34ch;
+}
+.condition.alert { color: var(--alert); font-weight: 700; }
+
+.readings {
+  margin: 0;
+  border-top: 1px solid var(--rule);
+}
+.reading {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr 2.5rem;
+  align-items: center;
+  column-gap: 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.reading dt { font-weight: 700; }
+.reading dd { margin: 0; }
+.reading .value {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.reading .why {
+  grid-column: 2 / 4;
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+/* LCD-style segmented meter: 10 segments */
+.meter {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 3px;
+  height: 0.9rem;
+}
+.meter span { background: var(--segment-off); border-radius: 1px; }
+.meter span.on { background: var(--shell); }
+.meter.low span.on { background: var(--alert); }
+.meter.none span { background: transparent; border: 1px dashed var(--segment-off); }
+
+/* --- Footer ------------------------------------------------------------- */
+.foot {
+  padding: 0 clamp(1rem, 4vw, 3rem) 2rem;
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+.foot p { max-width: 70ch; margin: 0 auto; text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .key .cap { transition: none; }
+}
