@@ -35,6 +35,11 @@ spec:
               value: {{ .Values.petName | quote }}
             - name: DECAY_PER_MINUTE
               value: {{ .Values.decayPerMinute | quote }}
+            # The pet's care history: stats are computed from it, so the pod holds no state
+            - name: PROMETHEUS_URL
+              value: {{ .Values.care.prometheusUrl | quote }}
+            - name: CARE_WINDOW_MINUTES
+              value: {{ .Values.care.windowMinutes | quote }}
             - name: CHAOS_LATENCY_MS
               value: {{ .Values.chaos.latencyMs | quote }}
             - name: CHAOS_ERROR_RATE

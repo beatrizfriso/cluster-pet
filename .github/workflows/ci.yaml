@@ -51,13 +51,17 @@ jobs:
           pip install -r app/requirements-dev.txt
           cd app && pytest -v
 
+      # No Prometheus here, so this also checks the degraded path:
+      # the app stays up and ready, and /status says why it can't answer
       - name: App smoke test
         run: |
           cd app && (uvicorn main:app --port 8000 &)
           # wait for the app to come up instead of a fixed sleep
-          curl -sf --retry 15 --retry-delay 1 --retry-connrefused localhost:8000/status
-          curl -sf -X POST localhost:8000/feed
-          curl -sf localhost:8000/metrics | grep kubegotchi_stat
+          curl -sf --retry 15 --retry-delay 1 --retry-connrefused localhost:8000/healthz
+          curl -sf localhost:8000/readyz
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8000/status)" = 503
+          curl -s localhost:8000/status | grep -q Prometheus
+          curl -sf localhost:8000/metrics | grep -q kubegotchi_http_requests_total
 
       - name: Docker build
         run: docker build -t kubegotchi:${{ github.sha }} app

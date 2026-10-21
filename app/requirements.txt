@@ -1,3 +1,5 @@
 fastapi==0.156.*
 uvicorn[standard]==0.32.*
 prometheus-client==0.21.*
+# Reads the care history from the Prometheus query API
+httpx==0.27.*
