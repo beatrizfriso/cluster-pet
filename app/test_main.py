@@ -17,21 +17,45 @@ client = TestClient(main.app)
 
 
 class FakePrometheus:
-    """Stands in for the Prometheus query API: returns care counts per action."""
+    """Stands in for the Prometheus query API.
+
+    Care queries get one sample per action from `counts`; /vitals queries are
+    recognized by a distinctive fragment and get the matching `scalars` value
+    (missing key = no data, like a series that doesn't exist yet).
+    """
+
+    VITALS = {
+        "budget": "[7d]",
+        "burn": "[1h]",
+        "p95": "histogram_quantile",
+        "cpu": "container_cpu_usage_seconds_total",
+        "memory": "container_memory_working_set_bytes",
+        "restarts": "kube_pod_container_status_restarts_total",
+    }
 
     def __init__(self):
         self.counts: dict[str, float] = {}
+        self.scalars: dict[str, float] = {}
         self.down = False
         self.queries: list[str] = []
+
+    def _result(self, query: str) -> list[dict]:
+        now = time.time()
+        if "kubegotchi_actions_total" in query:
+            return [{"metric": {"action": a}, "value": [now, str(n)]}
+                    for a, n in self.counts.items()]
+        for key, fragment in self.VITALS.items():
+            if fragment in query:
+                if key not in self.scalars:
+                    return []
+                return [{"metric": {}, "value": [now, str(self.scalars[key])]}]
+        raise AssertionError(f"unexpected query: {query}")
 
     def get(self, url, params=None, timeout=None):
         self.queries.append(params["query"])
         if self.down:
             raise httpx.ConnectError("connection refused")
-        result = [
-            {"metric": {"action": a}, "value": [time.time(), str(n)]}
-            for a, n in self.counts.items()
-        ]
+        result = self._result(params["query"])
         return httpx.Response(
             200,
             json={"status": "success", "data": {"resultType": "vector", "result": result}},
@@ -131,9 +155,69 @@ def test_gauge_tracks_computed_stats(prom):
 
 
 # ---------------------------------------------------------------------------
+# Vitals (the pet as the cluster sees it)
+# ---------------------------------------------------------------------------
+HEALTHY = {"budget": 1.0, "burn": 0.0, "p95": 0.05, "cpu": 0.1, "memory": 0.4, "restarts": 0}
+
+
+def test_vitals_map_cluster_signals(prom):
+    prom.scalars = dict(HEALTHY)
+    body = client.get("/vitals").json()
+    assert {k: v["value"] for k, v in body["vitals"].items()} == {
+        "health": 100, "mood": 100, "energy": 90, "hunger": 60, "injuries": 100,
+    }
+    assert body["condition"] == "unwell"  # worst vital is hunger at 60
+    assert body["fever"] is False
+    assert body["vitals"]["health"]["reading"] == "100% of the weekly error budget left"
+
+
+def test_spent_budget_is_a_critical_pet(prom):
+    prom.scalars = {**HEALTHY, "budget": -3.76, "burn": 5.65}
+    body = client.get("/vitals").json()
+    assert body["vitals"]["health"]["value"] == 0
+    assert body["condition"] == "critical"
+    assert body["fever"] is True
+    assert body["burn_rate"] == 5.65
+
+
+@pytest.mark.parametrize("p95, mood", [(0.05, 100), (0.1, 100), (0.2, 80), (0.3, 60),
+                                       (0.75, 30), (1.2, 0), (5, 0)])
+def test_latency_sets_the_mood(p95, mood):
+    assert main._p95_to_mood(p95) == pytest.approx(mood)
+
+
+@pytest.mark.parametrize("restarts, injuries", [(0, 100), (1.03, 75), (2, 50), (6, 0)])
+def test_restarts_are_injuries(prom, restarts, injuries):
+    prom.scalars = {**HEALTHY, "restarts": restarts}
+    assert client.get("/vitals").json()["vitals"]["injuries"]["value"] == injuries
+
+
+def test_no_traffic_yet_is_not_a_failure(prom):
+    # Fresh cluster: no Traefik series, so health, mood and fever have no data
+    prom.scalars = {"cpu": 0.1, "memory": 0.2, "restarts": 0}
+    body = client.get("/vitals").json()
+    assert body["vitals"]["health"] == {"value": None, "reading": "no traffic yet"}
+    assert body["vitals"]["mood"]["value"] is None
+    assert body["fever"] is False
+    assert body["condition"] == "healthy"  # from the vitals that do have data
+
+
+def test_vitals_read_the_configured_pet(prom, monkeypatch):
+    monkeypatch.setattr(main, "TRAEFIK_SERVICE", "other-pet-http@kubernetes")
+    monkeypatch.setattr(main, "POD_NAMESPACE", "other")
+    prom.scalars = dict(HEALTHY)
+    client.get("/vitals")
+    joined = " ".join(prom.queries)
+    assert 'service="other-pet-http@kubernetes"' in joined
+    assert 'namespace="other",container="pet"' in joined
+    assert 'service="pet-kubegotchi-http@kubernetes"' not in joined
+
+
+# ---------------------------------------------------------------------------
 # Prometheus down
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("method, path", [("GET", "/status"), ("POST", "/feed")])
+@pytest.mark.parametrize("method, path", [("GET", "/status"), ("POST", "/feed"),
+                                          ("GET", "/vitals")])
 def test_prometheus_down_is_a_503_not_made_up_numbers(prom, method, path):
     prom.down = True
     r = client.request(method, path)

@@ -9,6 +9,9 @@ decayPerMinute: 2
 care:
   prometheusUrl: http://monitoring-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090
   windowMinutes: 60
+  # Must match gitops/monitoring/slos/pet-availability.yaml: /vitals turns the
+  # error budget left into the pet's health
+  sloAvailabilityTarget: 0.99
 
 # Safe to scale since Phase 4 (stateless). Still 1 until the HPA is enabled.
 replicaCount: 1
