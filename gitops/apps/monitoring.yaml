@@ -42,6 +42,8 @@ spec:
             ruleSelectorNilUsesHelmValues: false
             # Longer than the 7d SLO window, so the error budget has full history
             retention: 8d
+            # k6 pushes what the simulated users saw (client-side SLI)
+            enableRemoteWriteReceiver: true
             # Without a disk, every Prometheus restart would wipe the SLO history
             storageSpec:
               volumeClaimTemplate:
