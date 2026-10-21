@@ -56,13 +56,11 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   flex-wrap: wrap;
   padding: 1.5rem clamp(1rem, 4vw, 3rem) 0;
 }
-/* The wordmark: a 90s toy-box logo, pink with a sticker-style offset shadow */
-.wordmark {
+.top h1 {
   margin: 0;
-  font: 400 clamp(2rem, 5vw, 2.9rem)/1.1 "Rampart One", var(--body);
-  letter-spacing: 0.02em;
-  color: #ff7aa8;
-  text-shadow: 3px 3px 0 var(--ink);
+  font-size: var(--step-3);
+  font-weight: 800;
+  line-height: 1.1;
 }
 .source {
   margin: 0;
@@ -98,26 +96,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 }
 
 /* --- The device -------------------------------------------------------- */
-.device {
-  position: relative;
-  justify-self: center;
-  width: 100%;
-  margin-top: 5.2rem; /* room for the chain above the ring */
-}
-
-/* Ball chain looping through the keychain ring. Same layer as the ring
-   (behind the shell); the ring is painted after it, so the chain reads as
-   passing through */
-.chain {
-  position: absolute;
-  z-index: -1;
-  left: 50%;
-  top: -6.3rem;
-  width: 5.4rem;
-  height: auto;
-  transform: translateX(-50%);
-  overflow: visible;
-}
+.device { justify-self: center; width: 100%; }
 
 .shell {
   position: relative;
