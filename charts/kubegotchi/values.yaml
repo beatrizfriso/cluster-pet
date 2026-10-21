@@ -28,7 +28,7 @@ autoscaling:
 # here, so changing it in a commit is how a new version reaches the cluster.
 image:
   repository: ghcr.io/beatrizfriso/kubegotchi
-  tag: sha-c0c8951
+  tag: sha-5017c5a
   pullPolicy: IfNotPresent
 
 service:
