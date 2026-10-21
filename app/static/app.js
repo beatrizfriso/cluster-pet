@@ -120,6 +120,30 @@ function drawFlash(action) { FLASH_ICONS[action].forEach(([x, y]) => px(2 + x, 2
 
 setInterval(() => { frame += 1; draw(); }, 700);
 
+// Ball chain: evenly spaced beads along the loop, like a real keychain chain
+function drawChain() {
+  const path = document.getElementById("chain-path");
+  const group = document.getElementById("chain-beads");
+  if (!path || !path.getTotalLength) return;
+  const ns = "http://www.w3.org/2000/svg";
+  const length = path.getTotalLength();
+  const SPACING = 9;
+  const beads = [];
+  for (let d = 0; d < length; d += SPACING) {
+    const p = path.getPointAtLength(d);
+    const bead = document.createElementNS(ns, "circle");
+    bead.setAttribute("cx", p.x.toFixed(2));
+    bead.setAttribute("cy", p.y.toFixed(2));
+    bead.setAttribute("r", "4");
+    bead.setAttribute("fill", "url(#bead)");
+    bead.setAttribute("stroke", "#7d6e99");
+    bead.setAttribute("stroke-width", "0.7");
+    beads.push(bead);
+  }
+  group.replaceChildren(...beads);
+}
+drawChain();
+
 // ---------------------------------------------------------------------------
 // Turning readings into the pet
 // ---------------------------------------------------------------------------
@@ -189,7 +213,7 @@ function row(label, value, why) {
 
 function render({ status, vitals, at }, source) {
   const name = (status.ok && status.name) || (vitals.ok && vitals.name) || "Kubegotchi";
-  document.getElementById("pet-name").textContent = name;
+  // The header is the Kubegotchi wordmark; the pet's name lives on the LCD and the tab
   document.title = `${name} | Kubegotchi`;
 
   // Vet chart: what the cluster says
