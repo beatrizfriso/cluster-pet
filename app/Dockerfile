@@ -4,6 +4,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY main.py .
+COPY static/ static/
 
 # Run as a non-root user (good practice that Phase 6 will enforce)
 RUN useradd --uid 10001 --no-create-home pet

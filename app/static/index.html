@@ -1,0 +1,54 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kubegotchi</title>
+  <meta name="description" content="A virtual pet whose health is a Kubernetes cluster.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Silkscreen&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+  <header class="top">
+    <h1 id="pet-name">Kubegotchi</h1>
+    <p class="source" id="source" aria-live="polite">Connecting to the cluster</p>
+  </header>
+
+  <main class="stage">
+    <section class="device" aria-label="The pet">
+      <div class="shell">
+        <div class="bezel">
+          <canvas id="lcd" width="32" height="22" role="img" aria-label="The pet"></canvas>
+          <p class="lcd-line" id="lcd-line" aria-live="polite"></p>
+        </div>
+        <div class="buttons" role="group" aria-label="Take care of the pet">
+          <button type="button" class="key" data-action="feed"><span class="cap" aria-hidden="true"></span><span class="label">Feed</span></button>
+          <button type="button" class="key" data-action="play"><span class="cap" aria-hidden="true"></span><span class="label">Play</span></button>
+          <button type="button" class="key" data-action="sleep"><span class="cap" aria-hidden="true"></span><span class="label">Sleep</span></button>
+        </div>
+      </div>
+      <p class="hint" id="hint"></p>
+    </section>
+
+    <section class="chart" aria-labelledby="chart-title">
+      <h2 id="chart-title">Vet chart</h2>
+      <p class="condition" id="condition">Waiting for the first reading</p>
+
+      <h3>What the cluster says</h3>
+      <dl class="readings" id="vitals"></dl>
+
+      <h3>What its owners did</h3>
+      <dl class="readings" id="care"></dl>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>Health is the availability error budget, mood is p95 latency, energy and hunger are
+      CPU and memory headroom, injuries are restarts. <a href="https://github.com/beatrizfriso/cluster-pet">Source on GitHub</a></p>
+  </footer>
+
+  <script src="static/app.js"></script>
+</body>
+</html>

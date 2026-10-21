@@ -35,7 +35,8 @@ import time
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 from starlette.routing import Match
 
@@ -50,6 +51,7 @@ APP_VERSION = os.getenv("APP_VERSION", "dev")
 POD_NAMESPACE = os.getenv("POD_NAMESPACE", "pet")
 TRAEFIK_SERVICE = os.getenv("TRAEFIK_SERVICE", "pet-kubegotchi-http@kubernetes")
 SLO_AVAILABILITY_TARGET = float(os.getenv("SLO_AVAILABILITY_TARGET", "0.99"))
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
 # ---------------------------------------------------------------------------
 # Metrics (the "vital signs" Prometheus will scrape)
@@ -218,7 +220,8 @@ def _vitals() -> dict:
         "health": vital(
             None if budget is None else _clamp(budget * 100),
             "no traffic yet" if budget is None
-            else f"{budget:.0%} of the weekly error budget left",
+            else f"{budget:.0%} of the weekly error budget left" if budget >= 0
+            else f"weekly error budget overspent by {-budget:.0%}",
         ),
         "mood": vital(
             None if p95 is None else _p95_to_mood(p95),
@@ -234,7 +237,8 @@ def _vitals() -> dict:
         ),
         "injuries": vital(
             None if restarts is None else _clamp(100 - 25 * round(restarts)),
-            f"{round(restarts or 0)} restart(s) in the last 24h",
+            "no restarts in the last 24h" if round(restarts or 0) == 0
+            else f"{round(restarts)} restart{'s' if round(restarts) > 1 else ''} in the last 24h",
         ),
     }
     known = [v["value"] for v in vitals.values() if v["value"] is not None]
@@ -360,3 +364,14 @@ def readyz() -> dict:
 @app.get("/metrics")
 def metrics() -> Response:
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+# The frontend: the page at "/" and its assets under /static/. Not mounted at
+# "/": a mount there matches every path and would answer GET /feed with 404
+# instead of 405, and label scanner noise as frontend traffic.
+@app.get("/", include_in_schema=False)
+def index() -> FileResponse:
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
