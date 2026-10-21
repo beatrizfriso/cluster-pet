@@ -20,9 +20,12 @@ A study project for **Kubernetes, GitOps, SRE and AI**, built to run 100% locall
 # Phase 0: the pet on your machine
 make run          # or: make run-docker (no local Python needed)
 # in another terminal
-curl localhost:8000/status
-curl -X POST localhost:8000/feed
+curl localhost:8000/healthz
 curl localhost:8000/metrics | grep kubegotchi
+# Since Phase 4 the pet's stats come from Prometheus, so /status answers 503
+# on its own. To use the cluster's Prometheus from a local run:
+#   kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-prometheus 9090
+#   PROMETHEUS_URL=http://localhost:9090 make run
 
 # Phase 1: the pet on Kubernetes
 make up           # creates the cluster, builds the image, installs the chart

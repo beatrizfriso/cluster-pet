@@ -1,14 +1,19 @@
 petName: Pipoca
 # How much each stat drops per minute
 decayPerMinute: 2
-# 1 replica on purpose: the pet's state lives in the pod's memory, so with
-# 2+ replicas each pod would be a different pet (feed one, query another).
-# In Phase 4 the state comes from Prometheus (/vitals), the app becomes
-# stateless and can scale. Try bumping it to 2 and see the problem.
+
+# The pod holds no state: stats are computed from the care history
+# (kubegotchi_actions_total) in Prometheus over a sliding window, so every
+# replica answers with the same pet. With no care for a whole window, a stat
+# reaches 0. If Prometheus is unreachable, /status answers 503.
+care:
+  prometheusUrl: http://monitoring-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090
+  windowMinutes: 60
+
+# Safe to scale since Phase 4 (stateless). Still 1 until the HPA is enabled.
 replicaCount: 1
 
-# Disabled for the same reason as replicaCount: with 2+ replicas the state
-# splits. Turn it on to see the problem; it becomes truly useful in Phase 4.
+# Turned on in a later Phase 4 step, now that replicas share the same pet
 autoscaling:
   enabled: false
   minReplicas: 1
