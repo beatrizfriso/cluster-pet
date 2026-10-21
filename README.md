@@ -6,6 +6,8 @@ SLOs become hunger, mood and energy: if latency goes up, it gets sad; if the err
 
 A study project for **Kubernetes, GitOps, SRE and AI**, built to run 100% locally with no cloud cost.
 
+**[See the pet go through a real chaos experiment](https://beatrizfriso.github.io/cluster-pet/)**: a replay of the cluster's own Prometheus data, from healthy to a burned error budget and back down from the fever.
+
 ## What you need to install
 
 - Docker

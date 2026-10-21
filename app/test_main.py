@@ -38,6 +38,7 @@ class FakePrometheus:
         self.scalars: dict[str, float] = {}
         self.down = False
         self.queries: list[str] = []
+        self.params: list[dict] = []
 
     def _result(self, query: str) -> list[dict]:
         now = time.time()
@@ -53,6 +54,7 @@ class FakePrometheus:
 
     def get(self, url, params=None, timeout=None):
         self.queries.append(params["query"])
+        self.params.append(params)
         if self.down:
             raise httpx.ConnectError("connection refused")
         result = self._result(params["query"])
@@ -161,12 +163,12 @@ HEALTHY = {"budget": 1.0, "burn": 0.0, "p95": 0.05, "cpu": 0.1, "memory": 0.4, "
 
 
 def test_vitals_map_cluster_signals(prom):
-    prom.scalars = dict(HEALTHY)
+    prom.scalars = {**HEALTHY, "memory": 0.8}
     body = client.get("/vitals").json()
     assert {k: v["value"] for k, v in body["vitals"].items()} == {
-        "health": 100, "mood": 100, "energy": 90, "hunger": 60, "injuries": 100,
+        "health": 100, "mood": 100, "energy": 100, "hunger": 40, "injuries": 100,
     }
-    assert body["condition"] == "unwell"  # worst vital is hunger at 60
+    assert body["condition"] == "unwell"  # worst vital is hunger at 40
     assert body["fever"] is False
     assert body["vitals"]["health"]["reading"] == "100% of the weekly error budget left"
 
@@ -185,6 +187,18 @@ def test_spent_budget_is_a_critical_pet(prom):
                                        (0.75, 30), (1.2, 0), (5, 0)])
 def test_latency_sets_the_mood(p95, mood):
     assert main._p95_to_mood(p95) == pytest.approx(mood)
+
+
+@pytest.mark.parametrize("usage, vital", [(0.0, 100), (0.33, 100), (0.5, 100),
+                                           (0.75, 50), (0.9, 20), (1.0, 0), (1.3, 0)])
+def test_resource_use_is_comfortable_up_to_half_the_limit(usage, vital):
+    # A pod at a third of its memory limit is healthy, not a hungry pet
+    assert main._headroom(usage) == pytest.approx(vital)
+
+
+def test_healthy_cluster_is_a_healthy_pet(prom):
+    prom.scalars = dict(HEALTHY)
+    assert client.get("/vitals").json()["condition"] == "healthy"
 
 
 @pytest.mark.parametrize("restarts, injuries, reading", [
@@ -218,6 +232,23 @@ def test_vitals_read_the_configured_pet(prom, monkeypatch):
     assert 'service="other-pet-http@kubernetes"' in joined
     assert 'namespace="other",container="pet"' in joined
     assert 'service="pet-kubegotchi-http@kubernetes"' not in joined
+
+
+def test_vitals_in_the_past_ask_prometheus_for_that_moment(prom):
+    # The demo recording replays the app's logic at past timestamps: if one
+    # query forgot the time, the recording would mix past and present silently
+    prom.scalars = dict(HEALTHY)
+    main._vitals(at=1792539525.0)
+    main._care_counts(at=1792539525.0)
+    assert len(prom.params) == 7
+    assert all(p.get("time") == 1792539525.0 for p in prom.params)
+
+
+def test_live_queries_carry_no_time(prom):
+    prom.scalars = dict(HEALTHY)
+    client.get("/vitals")
+    client.get("/status")
+    assert all("time" not in p for p in prom.params)
 
 
 # ---------------------------------------------------------------------------

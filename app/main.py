@@ -93,29 +93,34 @@ def _clamp(v: float) -> float:
     return max(0.0, min(100.0, v))
 
 
-def _prom_query(query: str) -> list[dict]:
-    """Instant query against Prometheus; any failure means the pet's state is unknown."""
+def _prom_query(query: str, at: float | None = None) -> list[dict]:
+    """Instant query against Prometheus; any failure means the pet's state is unknown.
+
+    `at` (unix seconds) evaluates the query in the past: the demo recording
+    uses it to replay what the pet looked like at each moment.
+    """
+    params = {"query": query} if at is None else {"query": query, "time": at}
     try:
-        r = httpx.get(f"{PROMETHEUS_URL}/api/v1/query", params={"query": query}, timeout=2.0)
+        r = httpx.get(f"{PROMETHEUS_URL}/api/v1/query", params=params, timeout=2.0)
         r.raise_for_status()
         return r.json()["data"]["result"]
     except (httpx.HTTPError, KeyError, ValueError) as e:
         raise PrometheusUnavailable(str(e)) from e
 
 
-def _prom_scalar(query: str) -> float | None:
+def _prom_scalar(query: str, at: float | None = None) -> float | None:
     """First value of a query, or None when there's no data (e.g. no traffic yet)."""
-    result = _prom_query(query)
+    result = _prom_query(query, at)
     if not result:
         return None
     value = float(result[0]["value"][1])
     return None if math.isnan(value) else value
 
 
-def _care_counts() -> dict[str, float]:
+def _care_counts(at: float | None = None) -> dict[str, float]:
     """How many times each care action happened in the window, across all replicas."""
     result = _prom_query(
-        f"sum by (action) (increase(kubegotchi_actions_total[{CARE_WINDOW_MINUTES}m]))"
+        f"sum by (action) (increase(kubegotchi_actions_total[{CARE_WINDOW_MINUTES}m]))", at
     )
     return {s["metric"].get("action", ""): float(s["value"][1]) for s in result}
 
@@ -172,6 +177,17 @@ def _p95_to_mood(p95: float) -> float:
     return _clamp(60 - (p95 - 0.3) / 0.9 * 60)
 
 
+def _headroom(usage: float) -> float:
+    """CPU or memory use against the pod limit, as a 0-100 vital.
+
+    Up to half the limit is a comfortable pod (100); from there it drops to 0
+    at the limit, where memory means OOMKilled and CPU means throttling.
+    """
+    if usage <= 0.5:
+        return 100.0
+    return _clamp(100 * (1 - usage) / 0.5)
+
+
 def _condition(values: list[float]) -> str:
     worst = min(values)
     if worst >= 70:
@@ -183,33 +199,36 @@ def _condition(values: list[float]) -> str:
     return "critical"
 
 
-def _vitals() -> dict:
+def _vitals(at: float | None = None) -> dict:
+    def scalar(query: str) -> float | None:
+        return _prom_scalar(query, at)
+
     svc = f'service="{TRAEFIK_SERVICE}"'
     pod = f'namespace="{POD_NAMESPACE}",container="pet"'
     budget_fraction = 1 - SLO_AVAILABILITY_TARGET
     errors = f'traefik_service_requests_total{{{svc},code=~"5.."}}'
     total = f"traefik_service_requests_total{{{svc}}}"
 
-    budget = _prom_scalar(
+    budget = scalar(
         f"1 - ((sum(increase({errors}[7d])) or vector(0)) "
         f"/ sum(increase({total}[7d]))) / {budget_fraction}"
     )
-    burn = _prom_scalar(
+    burn = scalar(
         f"((sum(rate({errors}[1h])) or vector(0)) / sum(rate({total}[1h]))) / {budget_fraction}"
     )
-    p95 = _prom_scalar(
+    p95 = scalar(
         "histogram_quantile(0.95, sum by (le) "
         f"(rate(traefik_service_request_duration_seconds_bucket{{{svc}}}[5m])))"
     )
-    cpu = _prom_scalar(
+    cpu = scalar(
         f"sum(rate(container_cpu_usage_seconds_total{{{pod}}}[5m])) "
         f'/ sum(kube_pod_container_resource_limits{{{pod},resource="cpu"}})'
     )
-    memory = _prom_scalar(
+    memory = scalar(
         f"sum(container_memory_working_set_bytes{{{pod}}}) "
         f'/ sum(kube_pod_container_resource_limits{{{pod},resource="memory"}})'
     )
-    restarts = _prom_scalar(
+    restarts = scalar(
         f"sum(increase(kube_pod_container_status_restarts_total{{{pod}}}[24h])) or vector(0)"
     )
 
@@ -228,11 +247,11 @@ def _vitals() -> dict:
             "no traffic yet" if p95 is None else f"p95 latency {p95 * 1000:.0f}ms",
         ),
         "energy": vital(
-            None if cpu is None else _clamp(100 * (1 - cpu)),
+            None if cpu is None else _headroom(cpu),
             "no data" if cpu is None else f"{cpu:.0%} of its CPU limit in use",
         ),
         "hunger": vital(
-            None if memory is None else _clamp(100 * (1 - memory)),
+            None if memory is None else _headroom(memory),
             "no data" if memory is None else f"{memory:.0%} of its memory limit in use",
         ),
         "injuries": vital(
