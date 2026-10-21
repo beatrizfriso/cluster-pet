@@ -61,6 +61,7 @@ jobs:
           curl -sf localhost:8000/readyz
           test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8000/status)" = 503
           curl -s localhost:8000/status | grep -q Prometheus
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8000/vitals)" = 503
           curl -sf localhost:8000/metrics | grep -q kubegotchi_http_requests_total
 
       - name: Docker build
