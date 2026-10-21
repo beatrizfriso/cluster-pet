@@ -177,7 +177,7 @@ function row(label, value, why) {
   return wrap;
 }
 
-function render({ status, vitals, at }) {
+function render({ status, vitals, at }, source) {
   const name = (status.ok && status.name) || (vitals.ok && vitals.name) || "Kubegotchi";
   document.getElementById("pet-name").textContent = name;
   document.title = `${name} | Kubegotchi`;
@@ -216,9 +216,14 @@ function render({ status, vitals, at }) {
   setLcdLine(`${name} is ${face}`);
   draw();
 
-  const source = document.getElementById("source");
-  source.textContent = `Live, updated ${at.toLocaleTimeString()}`;
-  source.className = "source live";
+  const sourceEl = document.getElementById("source");
+  if (source.kind === "demo") {
+    sourceEl.textContent = `Recording, ${at.toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}`;
+    sourceEl.className = "source recorded";
+  } else {
+    sourceEl.textContent = `Live, updated ${at.toLocaleTimeString()}`;
+    sourceEl.className = "source live";
+  }
 }
 
 function setLcdLine(text) { document.getElementById("lcd-line").textContent = text; }
@@ -255,7 +260,7 @@ function wireButtons(source) {
 // ---------------------------------------------------------------------------
 async function refresh(source) {
   try {
-    render(await source.read());
+    render(await source.read(), source);
   } catch (e) {
     const el = document.getElementById("source");
     el.textContent = "Can't reach the pet. Is the cluster running?";
@@ -270,4 +275,113 @@ function start(source) {
   setInterval(() => refresh(source), POLL_MS);
 }
 
-start(liveSource);
+// ---------------------------------------------------------------------------
+// Demo: a recording of a real chaos experiment instead of the live cluster.
+// Used on GitHub Pages (no cluster behind it) or with ?demo in the URL.
+// ---------------------------------------------------------------------------
+const RECORDING = "static/demo/chaos-2026-10-20.json";
+const PLAY_MS = 350;
+
+function demoSource(recording) {
+  return {
+    kind: "demo",
+    index: 0,
+    recording,
+    read() {
+      const f = recording.frames[this.index];
+      return { status: f.status, vitals: f.vitals, at: new Date(f.at) };
+    },
+    async care() {
+      throw new Error("This is a recording, so the buttons are off. Run the cluster to take care of a live pet.");
+    },
+  };
+}
+
+function frameAt(recording, iso) {
+  const t = Date.parse(iso);
+  let best = 0;
+  recording.frames.forEach((f, i) => { if (Date.parse(f.at) <= t) best = i; });
+  return best;
+}
+
+function startDemo(source, firstFrame = 0) {
+  const { recording } = source;
+  const range = document.getElementById("tape-range");
+  const play = document.getElementById("tape-play");
+  const marks = document.getElementById("tape-marks");
+  document.getElementById("tape").hidden = false;
+  document.getElementById("tape-title").textContent = recording.title;
+
+  document.querySelectorAll(".key").forEach((k) => { k.disabled = true; });
+  document.getElementById("hint").textContent =
+    "A recording of a real chaos experiment. Press play or pick a moment below.";
+
+  const markIndexes = recording.markers.map((m) => frameAt(recording, m.at));
+  marks.replaceChildren(...recording.markers.map((m, n) => {
+    const li = document.createElement("li");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    const time = document.createElement("time");
+    time.dateTime = m.at;
+    time.textContent = new Date(m.at).toLocaleTimeString([], { timeStyle: "short" });
+    btn.append(time, m.label);
+    btn.addEventListener("click", () => { stop(); seek(markIndexes[n]); });
+    li.append(btn);
+    return li;
+  }));
+
+  range.max = String(recording.frames.length - 1);
+
+  function seek(i) {
+    source.index = i;
+    range.value = String(i);
+    // The latest milestone already reached is the current step
+    let current = -1;
+    markIndexes.forEach((mi, n) => { if (mi <= i) current = n; });
+    [...marks.children].forEach((li, n) => {
+      if (n === current) li.setAttribute("aria-current", "step");
+      else li.removeAttribute("aria-current");
+    });
+    refresh(source);
+  }
+
+  let timer = null;
+  function stop() {
+    clearInterval(timer);
+    timer = null;
+    play.textContent = "Play";
+    play.setAttribute("aria-pressed", "false");
+  }
+  play.addEventListener("click", () => {
+    if (timer) return stop();
+    if (source.index >= recording.frames.length - 1) seek(0);
+    play.textContent = "Pause";
+    play.setAttribute("aria-pressed", "true");
+    timer = setInterval(() => {
+      if (source.index >= recording.frames.length - 1) return stop();
+      seek(source.index + 1);
+    }, PLAY_MS);
+  });
+  range.addEventListener("input", () => { stop(); seek(Number(range.value)); });
+
+  draw();
+  seek(Math.min(Math.max(firstFrame, 0), recording.frames.length - 1));
+}
+
+async function boot() {
+  const params = new URLSearchParams(location.search);
+  const demo = params.has("demo") || location.hostname.endsWith("github.io");
+  if (!demo) return start(liveSource);
+  try {
+    const r = await fetch(RECORDING);
+    if (!r.ok) throw new Error(`recording not found (${r.status})`);
+    // ?frame=N opens a given moment, so a moment of the recording can be linked
+    startDemo(demoSource(await r.json()), Number(params.get("frame")) || 0);
+  } catch (e) {
+    const el = document.getElementById("source");
+    el.textContent = `Can't load the recording: ${e.message}`;
+    el.className = "source live down";
+  }
+}
+
+boot();

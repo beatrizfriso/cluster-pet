@@ -30,6 +30,16 @@
         </div>
       </div>
       <p class="hint" id="hint"></p>
+
+      <section class="tape" id="tape" hidden aria-labelledby="tape-title">
+        <h2 id="tape-title">Recording</h2>
+        <div class="tape-controls">
+          <button type="button" class="tape-play" id="tape-play">Play</button>
+          <input type="range" id="tape-range" min="0" max="0" value="0"
+                 aria-label="Moment in the recording">
+        </div>
+        <ol class="tape-marks" id="tape-marks"></ol>
+      </section>
     </section>
 
     <section class="chart" aria-labelledby="chart-title">
