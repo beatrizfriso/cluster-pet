@@ -7,7 +7,7 @@
   <meta name="description" content="A virtual pet whose health is a Kubernetes cluster.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=M+PLUS+Rounded+1c:wght@400;700;800&family=Rampart+One&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
@@ -21,24 +21,12 @@
   </svg>
 
   <header class="top">
-    <h1 class="wordmark">Kubegotchi</h1>
+    <h1>Kubegotchi</h1>
     <p class="source" id="source" aria-live="polite">Connecting to the cluster</p>
   </header>
 
   <main class="stage">
     <section class="device" aria-label="The pet">
-      <!-- Ball chain through the keychain ring; beads are placed along the path by app.js -->
-      <svg class="chain" viewBox="0 0 100 120" aria-hidden="true">
-        <defs>
-          <radialGradient id="bead" cx="35%" cy="30%" r="70%">
-            <stop offset="0" stop-color="#ffffff"/>
-            <stop offset="0.4" stop-color="#e2dbee"/>
-            <stop offset="1" stop-color="#9a8bb4"/>
-          </radialGradient>
-        </defs>
-        <path id="chain-path" d="M50 116 C 0 88, 4 5, 50 5 C 96 5, 100 88, 50 116" fill="none"/>
-        <g id="chain-beads"></g>
-      </svg>
       <div class="shell">
         <div class="bezel">
           <canvas id="lcd" width="32" height="22" role="img" aria-label="The pet"></canvas>
