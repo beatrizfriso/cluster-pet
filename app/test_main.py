@@ -75,8 +75,11 @@ def prom(monkeypatch):
     monkeypatch.setattr(main, "CHAOS_ERROR_RATE", 0)
     monkeypatch.setattr(main, "DECAY_PER_MINUTE", 2)
     monkeypatch.setattr(main, "CARE_WINDOW_MINUTES", 60)
+    # Every test starts without a cached /vitals answer
+    monkeypatch.setattr(main, "VITALS_CACHE_SECONDS", 0)
+    monkeypatch.setattr(main, "_vitals_cache", None)
     fake = FakePrometheus()
-    monkeypatch.setattr(main.httpx, "get", fake.get)
+    monkeypatch.setattr(main, "_http", fake)
     return fake
 
 
@@ -242,6 +245,46 @@ def test_vitals_in_the_past_ask_prometheus_for_that_moment(prom):
     main._care_counts(at=1792539525.0)
     assert len(prom.params) == 7
     assert all(p.get("time") == 1792539525.0 for p in prom.params)
+
+
+def test_vitals_are_cached_for_a_few_seconds(prom, monkeypatch):
+    monkeypatch.setattr(main, "VITALS_CACHE_SECONDS", 10)
+    prom.scalars = dict(HEALTHY)
+    first = client.get("/vitals").json()
+    asked = len(prom.queries)
+    prom.scalars = {**HEALTHY, "budget": -1.0}  # Prometheus changes...
+    assert client.get("/vitals").json() == first  # ...but the cached answer is reused
+    assert len(prom.queries) == asked
+
+
+def test_vitals_cache_expires(prom, monkeypatch):
+    monkeypatch.setattr(main, "VITALS_CACHE_SECONDS", 10)
+    clock = [1000.0]
+    monkeypatch.setattr(main.time, "monotonic", lambda: clock[0])
+    prom.scalars = dict(HEALTHY)
+    client.get("/vitals")
+    prom.scalars = {**HEALTHY, "budget": -1.0}
+    clock[0] += 11
+    assert client.get("/vitals").json()["vitals"]["health"]["value"] == 0
+
+
+def test_a_failure_is_not_cached(prom, monkeypatch):
+    monkeypatch.setattr(main, "VITALS_CACHE_SECONDS", 10)
+    prom.down = True
+    assert client.get("/vitals").status_code == 503
+    prom.down = False
+    prom.scalars = dict(HEALTHY)
+    assert client.get("/vitals").status_code == 200
+
+
+def test_recording_bypasses_the_cache(prom, monkeypatch):
+    # The demo recorder evaluates past moments; a cached live answer would be wrong
+    monkeypatch.setattr(main, "VITALS_CACHE_SECONDS", 10)
+    prom.scalars = dict(HEALTHY)
+    client.get("/vitals")
+    asked = len(prom.queries)
+    main._vitals(at=1792539525.0)
+    assert len(prom.queries) == asked + 6
 
 
 def test_live_queries_carry_no_time(prom):

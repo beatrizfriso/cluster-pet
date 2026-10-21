@@ -21,6 +21,7 @@ Environment variables:
   TRAEFIK_SERVICE      Traefik service name of the pet, for the SLIs
                        (default: pet-kubegotchi-http@kubernetes)
   SLO_AVAILABILITY_TARGET  availability SLO target (default: 0.99)
+  VITALS_CACHE_SECONDS     how long a live /vitals answer is reused (default: 10)
 
 /status is the pet as its owners keep it (care). /vitals is the pet as the
 cluster keeps it: health is the availability error budget, mood the latency,
@@ -31,7 +32,9 @@ import asyncio
 import math
 import os
 import random
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
@@ -51,6 +54,7 @@ APP_VERSION = os.getenv("APP_VERSION", "dev")
 POD_NAMESPACE = os.getenv("POD_NAMESPACE", "pet")
 TRAEFIK_SERVICE = os.getenv("TRAEFIK_SERVICE", "pet-kubegotchi-http@kubernetes")
 SLO_AVAILABILITY_TARGET = float(os.getenv("SLO_AVAILABILITY_TARGET", "0.99"))
+VITALS_CACHE_SECONDS = float(os.getenv("VITALS_CACHE_SECONDS", "10"))
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
 # ---------------------------------------------------------------------------
@@ -93,6 +97,15 @@ def _clamp(v: float) -> float:
     return max(0.0, min(100.0, v))
 
 
+# One client with keep-alive connections, shared by all requests: a new TCP
+# connection per query added ~40ms to some calls
+_http = httpx.Client(timeout=2.0)
+# Runs the /vitals queries concurrently
+_query_pool = ThreadPoolExecutor(max_workers=6, thread_name_prefix="prom")
+_vitals_lock = threading.Lock()
+_vitals_cache: tuple[float, dict] | None = None
+
+
 def _prom_query(query: str, at: float | None = None) -> list[dict]:
     """Instant query against Prometheus; any failure means the pet's state is unknown.
 
@@ -101,7 +114,7 @@ def _prom_query(query: str, at: float | None = None) -> list[dict]:
     """
     params = {"query": query} if at is None else {"query": query, "time": at}
     try:
-        r = httpx.get(f"{PROMETHEUS_URL}/api/v1/query", params=params, timeout=2.0)
+        r = _http.get(f"{PROMETHEUS_URL}/api/v1/query", params=params)
         r.raise_for_status()
         return r.json()["data"]["result"]
     except (httpx.HTTPError, KeyError, ValueError) as e:
@@ -199,37 +212,52 @@ def _condition(values: list[float]) -> str:
     return "critical"
 
 
-def _vitals(at: float | None = None) -> dict:
-    def scalar(query: str) -> float | None:
-        return _prom_scalar(query, at)
+def _vitals_cached() -> dict:
+    """Live /vitals, computed at most once per VITALS_CACHE_SECONDS.
 
+    The vitals come from metrics scraped every 15s, so recomputing them per
+    request adds no information: it only multiplies Prometheus queries by the
+    number of visitors and ties every visitor's latency to Prometheus' tail
+    latency. Failures are not cached, so a recovered Prometheus is used at once.
+    """
+    global _vitals_cache
+    with _vitals_lock:  # concurrent visitors wait for one computation
+        cached = _vitals_cache
+        if cached and time.monotonic() - cached[0] < VITALS_CACHE_SECONDS:
+            return cached[1]
+        result = _vitals()
+        _vitals_cache = (time.monotonic(), result)
+        return result
+
+
+def _vitals(at: float | None = None) -> dict:
     svc = f'service="{TRAEFIK_SERVICE}"'
     pod = f'namespace="{POD_NAMESPACE}",container="pet"'
     budget_fraction = 1 - SLO_AVAILABILITY_TARGET
     errors = f'traefik_service_requests_total{{{svc},code=~"5.."}}'
     total = f"traefik_service_requests_total{{{svc}}}"
 
-    budget = scalar(
+    queries = [
+        # budget
         f"1 - ((sum(increase({errors}[7d])) or vector(0)) "
-        f"/ sum(increase({total}[7d]))) / {budget_fraction}"
-    )
-    burn = scalar(
-        f"((sum(rate({errors}[1h])) or vector(0)) / sum(rate({total}[1h]))) / {budget_fraction}"
-    )
-    p95 = scalar(
+        f"/ sum(increase({total}[7d]))) / {budget_fraction}",
+        # burn
+        f"((sum(rate({errors}[1h])) or vector(0)) / sum(rate({total}[1h]))) / {budget_fraction}",
+        # p95
         "histogram_quantile(0.95, sum by (le) "
-        f"(rate(traefik_service_request_duration_seconds_bucket{{{svc}}}[5m])))"
-    )
-    cpu = scalar(
+        f"(rate(traefik_service_request_duration_seconds_bucket{{{svc}}}[5m])))",
+        # cpu
         f"sum(rate(container_cpu_usage_seconds_total{{{pod}}}[5m])) "
-        f'/ sum(kube_pod_container_resource_limits{{{pod},resource="cpu"}})'
-    )
-    memory = scalar(
+        f'/ sum(kube_pod_container_resource_limits{{{pod},resource="cpu"}})',
+        # memory
         f"sum(container_memory_working_set_bytes{{{pod}}}) "
-        f'/ sum(kube_pod_container_resource_limits{{{pod},resource="memory"}})'
-    )
-    restarts = scalar(
-        f"sum(increase(kube_pod_container_status_restarts_total{{{pod}}}[24h])) or vector(0)"
+        f'/ sum(kube_pod_container_resource_limits{{{pod},resource="memory"}})',
+        # restarts
+        f"sum(increase(kube_pod_container_status_restarts_total{{{pod}}}[24h])) or vector(0)",
+    ]
+    # In parallel: the answer takes as long as the slowest query, not their sum
+    budget, burn, p95, cpu, memory, restarts = _query_pool.map(
+        lambda q: _prom_scalar(q, at), queries
     )
 
     def vital(value: float | None, reading: str) -> dict:
@@ -345,7 +373,7 @@ def status() -> dict:
 
 @app.get("/vitals")
 def vitals() -> dict:
-    return _vitals()
+    return _vitals_cached()
 
 
 @app.post("/feed")
