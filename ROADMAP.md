@@ -67,7 +67,9 @@ Every phase ends with something working and visible. Check items off as you go.
 ## Phase 4: the pet gets a face (1–2 weeks)
 - [ ] `/vitals` endpoint that queries Prometheus and returns the state computed from the SLOs
 - [ ] Frontend that draws the pet reacting in real time
-- [ ] k6 traffic generator simulating day-to-day load
+- [ ] k6 traffic generator simulating day-to-day load, with care at a realistic rate (~8/h, not the
+  current ~540/h that pins fed/happiness/rested at 100); then record a new demo where care drops
+  during an incident too (the current recording hides the care section for that reason)
 - [ ] Frontend deployed to the cluster by the same chart (or a sibling chart)
 
 **Done when:** you open the page and the pet reacts to what happens in the cluster.
