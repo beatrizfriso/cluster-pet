@@ -72,7 +72,11 @@ const BANDAGE = [[1, 0], [0, 1], [1, 1], [2, 1], [1, 2]];
 
 const canvas = document.getElementById("lcd");
 const ctx = canvas.getContext("2d");
-const INK = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#253021";
+const rootStyle = getComputedStyle(document.documentElement);
+const INK = rootStyle.getPropertyValue("--ink").trim() || "#4a2d4f";
+const BLUSH = rootStyle.getPropertyValue("--blush").trim() || "#f28cb1";
+// Two pixels per cheek, on the row between the eyes and the mouth
+const CHEEKS = [[2, 7], [3, 7], [12, 7], [13, 7]];
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 let face = "ok";
@@ -93,6 +97,12 @@ function draw() {
 
   BODY.forEach((row, y) => [...row].forEach((c, x) => c === "#" && px(ox + x, oy + y)));
   FACES[face].forEach(([x, y]) => px(ox + x, oy + y));
+  // Blushing cheeks while it's doing fine; a sick pet loses its color
+  if (face === "happy" || face === "ok") {
+    ctx.fillStyle = BLUSH;
+    CHEEKS.forEach(([x, y]) => px(ox + x, oy + y));
+    ctx.fillStyle = INK;
+  }
   // Status icons on the screen's sides, like the real toy: a 16px face has no
   // room for a bandage without blurring into the outline
   if (injured) BANDAGE.forEach(([x, y]) => px(2 + x, 10 + y));
