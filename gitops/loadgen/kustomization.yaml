@@ -4,9 +4,9 @@ namespace: loadgen
 resources:
   - namespace.yaml
   - deployment.yaml
-# The script lives in its own file; the hash suffix in the ConfigMap name
+# The k6 script lives in its own file; the hash suffix in the ConfigMap name
 # rolls the Deployment whenever the script changes
 configMapGenerator:
-  - name: owners-script
+  - name: k6-script
     files:
-      - owners.sh
+      - day.js

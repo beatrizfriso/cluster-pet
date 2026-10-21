@@ -1,52 +1,69 @@
-# Steady background traffic so the SLIs have volume. Replaced by k6 in Phase 4.
-# Scale to 0 to pause it: change replicas here in a PR (selfHeal reverts kubectl scale).
+# Simulated visitors and owners with k6 (gitops/loadgen/day.js): one compressed
+# day per hour, run in a loop. Scale to 0 to pause it: change replicas here in
+# a PR (selfHeal reverts kubectl scale). For an HPA test, set SPIKE_RATE.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: owners
+  name: k6
   labels:
-    app.kubernetes.io/name: owners
+    app.kubernetes.io/name: k6
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: owners
+      app.kubernetes.io/name: k6
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: owners
+        app.kubernetes.io/name: k6
     spec:
       securityContext:
         runAsNonRoot: true
-        runAsUser: 100
+        runAsUser: 12345 # the k6 user of the official image
       # With the default ndots:5, the 4-dot Traefik name is first tried against
-      # every search domain. When one of those UDP queries is lost, musl (Alpine)
-      # retries only after 5s, curl hits its -m 5 timeout and logs code 000 (~1%
-      # of requests). ndots:2 resolves dotted names directly.
+      # every search domain; a lost UDP query then costs a 5s retry (seen with
+      # the old curl generator as code 000 on ~1% of requests).
       dnsConfig:
         options:
           - name: ndots
             value: "2"
       containers:
-        - name: owners
-          image: curlimages/curl:8.11.1
-          command: ["sh", "/scripts/owners.sh"]
+        - name: k6
+          image: grafana/k6:2.3.0
+          # k6 exits at the end of each day; the loop starts the next one
+          # instead of letting Kubernetes count it as a restart
+          command: ["sh", "-c"]
+          args:
+            - while true; do k6 run --no-usage-report -q -o experimental-prometheus-rw /scripts/day.js; sleep 5; done
+          env:
+            - name: SPIKE_RATE
+              value: "0"
+            # What the users saw, pushed to Prometheus (the remote write
+            # receiver is enabled in gitops/apps/monitoring.yaml)
+            - name: K6_PROMETHEUS_RW_SERVER_URL
+              value: http://monitoring-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090/api/v1/write
+            - name: K6_PROMETHEUS_RW_TREND_STATS
+              value: "p(95),p(99),avg"
           resources:
             requests:
-              cpu: 10m
-              memory: 16Mi
+              cpu: 50m
+              memory: 64Mi
             limits:
-              cpu: 100m
-              memory: 32Mi
+              cpu: 500m
+              memory: 256Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
           volumeMounts:
-            - name: scripts
+            - name: script
               mountPath: /scripts
+            - name: tmp
+              mountPath: /tmp
       volumes:
-        - name: scripts
+        - name: script
           configMap:
-            name: owners-script
+            name: k6-script
+        - name: tmp
+          emptyDir: {}
