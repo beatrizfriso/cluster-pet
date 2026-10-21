@@ -322,6 +322,10 @@ function startDemo(source, firstFrame = 0) {
   document.getElementById("tape-title").textContent = recording.title;
 
   document.querySelectorAll(".key").forEach((k) => { k.disabled = true; });
+  // The recorded care stats sit at 100 the whole time (the load generator
+  // over-fed the pet), so showing them would teach that care is unaffected
+  // by an incident. Hidden until a recording with realistic care exists.
+  document.getElementById("care-section").hidden = true;
   document.getElementById("hint").textContent =
     "A recording of a real chaos experiment. Press play or pick a moment below.";
 
